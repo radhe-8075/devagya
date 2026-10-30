@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let isSending = false;
     let chatContext = null; // remembers the last topic for follow-up questions
+    let chatWorkflow = null; // state of a guided request (apply / track), sent back to the server
 
     const CLIENT_MESSAGES = {
         timeout: {
@@ -242,7 +243,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     // IMPORTANT: server.js expects "question"
                     body: JSON.stringify({
                         question: cleanQuestion,
-                        context: chatContext
+                        context: chatContext,
+                        workflow: chatWorkflow
                     })
                 });
             } catch (networkError) {
@@ -285,6 +287,9 @@ document.addEventListener("DOMContentLoaded", function () {
             if (data.context) {
                 chatContext = data.context;
             }
+
+            // null when no guided request is running
+            chatWorkflow = data.workflow || null;
 
             addMessage(answer, "bot", data.suggestions);
 
@@ -344,6 +349,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             chatContext = null;
+            chatWorkflow = null;
 
             if (chatWelcome) {
                 chatWelcome.style.display = "";
