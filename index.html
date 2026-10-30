@@ -1,0 +1,576 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Devagya | GLA University Student Assistant</title>
+    <meta name="description" content="Devagya is a student assistance portal for GLA University, helping students find academic information, events, faculty cabins and campus services.">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="site-header">
+        <div class="header-container">
+
+            
+<a href="#home" class="brand">
+    <div class="brand-logo">GLA</div>
+    <div class="brand-text">
+        <h2>GLA UNIVERSITY</h2>
+        <span>STUDENT ASSISTANCE PORTAL</span>
+    </div>
+</a>
+
+
+            <button
+                class="menu-toggle"
+                id="menuToggle"
+                aria-label="Toggle navigation"
+                aria-expanded="false">
+                ☰
+            </button>
+
+            <nav class="main-nav" id="mainNav">
+                <a href="#home" class="nav-link">Home</a>
+                <a href="#services" class="nav-link">Student Services</a>
+                <a href="#faculty-finder" class="nav-link">Faculty Cabin</a>
+                <a href="#about" class="nav-link">About</a>
+                <a href="#help" class="nav-link">Help Desk</a>
+                <button class="nav-chat-button" data-open-chat>
+                    Ask Devagya 💬
+                </button>
+            </nav>
+
+        </div>
+    </header>
+
+
+    <!-- HERO SECTION -->
+    <main>
+
+        <section class="hero-section" id="home">
+            <div class="hero-container">
+
+                <div class="hero-content">
+                    <span class="hero-label">
+                        ✨ YOUR CAMPUS, MADE SIMPLER
+                    </span>
+
+                    <h1>
+                        Your University Life,
+                        <span>Made Easier.</span>
+                    </h1>
+
+                    <p>
+                        Meet Devagya, your friendly student assistant.
+                        Get help with exams, events, faculty cabins,
+                        university services and campus information
+                        from one place.
+                    </p>
+
+                    <div class="hero-buttons">
+                        <button class="primary-button" data-open-chat>
+                            Ask Devagya <span>→</span>
+                        </button>
+
+                        <a href="#services" class="secondary-button">
+                            Explore Services
+                        </a>
+                    </div>
+
+                    <div class="hero-note">
+                        <span>🙋‍♂️</span>
+                        <p>Your friendly campus assistance companion</p>
+                    </div>
+                </div>
+
+                <!-- CAMPUS ILLUSTRATION -->
+                <div class="campus-scene">
+                    <div class="campus-sun"></div>
+                    <div class="campus-cloud cloud-one"></div>
+                    <div class="campus-cloud cloud-two"></div>
+
+                    <div class="campus-building">
+                        <div class="building-roof"></div>
+
+                        <div class="building-top">
+                            GLA UNIVERSITY
+                        </div>
+
+                        <div class="building-columns">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+
+                        <div class="building-door"></div>
+                    </div>
+
+                    <div class="campus-ground"></div>
+
+                    <div class="floating-card exam-card">
+                        <span>📅</span>
+                        <div>
+                            <strong>Exam Updates</strong>
+                            <small>Find academic notices</small>
+                        </div>
+                    </div>
+
+                    <div class="floating-card assistant-card">
+                        <span>🙋‍♂️</span>
+                        <div>
+                            <strong>Hi, I'm Devagya!</strong>
+                            <small>How can I help you?</small>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- QUICK INFORMATION -->
+        <section class="quick-info">
+            <div class="quick-info-item">
+                <span>📚</span>
+                <div>
+                    <strong>Academic Help</strong>
+                    <small>Exams and studies</small>
+                </div>
+            </div>
+
+            <div class="quick-info-item">
+                <span>🎉</span>
+                <div>
+                    <strong>Campus Events</strong>
+                    <small>Events and activities</small>
+                </div>
+            </div>
+
+            <div class="quick-info-item">
+                <span>🏢</span>
+                <div>
+                    <strong>Faculty Finder</strong>
+                    <small>Cabins and departments</small>
+                </div>
+            </div>
+
+            <div class="quick-info-item">
+                <span>💬</span>
+                <div>
+                    <strong>Student Support</strong>
+                    <small>Help when you need it</small>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- STUDENT SERVICES -->
+        <section class="services-section" id="services">
+            <div class="section-container">
+
+                <div class="section-heading">
+                    <span class="section-eyebrow">STUDENT SUPPORT</span>
+                    <h2>How Can We <span>Help You?</span></h2>
+                    <p>
+                        Explore student services or ask Devagya
+                        for guidance with your university questions.
+                    </p>
+                </div>
+
+                <div class="services-grid">
+
+                    <article class="service-card">
+                        <div class="service-icon">📅</div>
+                        <h3>Exam Information</h3>
+                        <p>
+                            Find help with exam schedules, date sheets,
+                            practicals and academic notices.
+                        </p>
+                        <button data-question="How can I find official exam dates and date sheets?">
+                            Ask about exams →
+                        </button>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">🎉</div>
+                        <h3>Events & Activities</h3>
+                        <p>
+                            Get guidance about university events,
+                            fests, workshops and registration.
+                        </p>
+                        <button data-question="What are the upcoming university events?">
+                            Explore events →
+                        </button>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">🏢</div>
+                        <h3>Faculty Cabin Finder</h3>
+                        <p>
+                            Search the faculty directory by name
+                            or department when verified records exist.
+                        </p>
+                        <a href="#faculty-finder">Find Faculty →</a>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">💳</div>
+                        <h3>Fee Information</h3>
+                        <p>
+                            Get guidance about fee-related questions,
+                            payment procedures and official support.
+                        </p>
+                        <button data-question="Where can I get official university fee information?">
+                            Ask about fees →
+                        </button>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">🎓</div>
+                        <h3>Scholarships</h3>
+                        <p>
+                            Learn where to find scholarship eligibility,
+                            application details and deadlines.
+                        </p>
+                        <button data-question="Where can I find official scholarship information?">
+                            Scholarship help →
+                        </button>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">📄</div>
+                        <h3>Certificates & Documents</h3>
+                        <p>
+                            Find guidance about certificates,
+                            document requests and concerned offices.
+                        </p>
+                        <button data-question="How can I get help with university certificates and documents?">
+                            Get guidance →
+                        </button>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">📊</div>
+                        <h3>Attendance & Classes</h3>
+                        <p>
+                            Get guidance about attendance queries,
+                            class schedules and academic support.
+                        </p>
+                        <button data-question="Where can I get help with attendance and class timetable queries?">
+                            Ask about classes →
+                        </button>
+                    </article>
+
+                    <article class="service-card">
+                        <div class="service-icon">🧭</div>
+                        <h3>Campus Assistance</h3>
+                        <p>
+                            Find out which department or office
+                            may help with your campus-related question.
+                        </p>
+                        <button data-question="Help me find the right university office for my problem.">
+                            Find assistance →
+                        </button>
+                    </article>
+
+                </div>
+            </div>
+        </section>
+
+
+        <!-- FACULTY CABIN FINDER -->
+        <section class="faculty-section" id="faculty-finder">
+            <div class="section-container">
+
+                <div class="section-heading">
+                    <span class="section-eyebrow">CAMPUS NAVIGATION</span>
+                    <h2>Find Your <span>Faculty Cabin.</span></h2>
+                    <p>
+                        Search for a faculty member and view their
+                        department and cabin information when available.
+                    </p>
+                </div>
+
+                <div class="faculty-finder-card">
+
+                    <div class="faculty-finder-icon">🏢</div>
+
+                    <h3>Where Is Your Faculty?</h3>
+
+                    <p>
+                        Enter a faculty name or department to search
+                        the available directory.
+                    </p>
+
+                    <form id="facultySearchForm" class="faculty-search-form">
+                        <input
+                            type="text"
+                            id="facultySearchInput"
+                            placeholder="Faculty name or department..."
+                            aria-label="Search faculty name or department"
+                            required>
+
+                        <button type="submit">
+                            Search Faculty →
+                        </button>
+                    </form>
+
+                    <div
+                        id="facultySearchResults"
+                        class="faculty-results"
+                        aria-live="polite">
+
+                        <p class="faculty-placeholder">
+                            🔎 Search results will appear here.
+                        </p>
+                    </div>
+
+                    <p class="faculty-demo-note">
+                        Faculty and cabin details must be verified
+                        against an official university source.
+                    </p>
+
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ABOUT DEVAGYA -->
+        <section class="about-section" id="about">
+            <div class="section-container about-container">
+
+                <div class="about-visual">
+                    <div class="about-emoji">🙋‍♂️</div>
+                    <div class="about-bubble bubble-one">Exam Help 📚</div>
+                    <div class="about-bubble bubble-two">Campus Help 🧭</div>
+                    <div class="about-bubble bubble-three">Event Info 🎉</div>
+                </div>
+
+                <div class="about-content">
+                    <span class="section-eyebrow">MEET YOUR ASSISTANT</span>
+
+                    <h2>
+                        A Smarter Way to
+                        <span>Navigate University Life.</span>
+                    </h2>
+
+                    <p>
+                        Devagya is designed to make university
+                        information easier to find. The goal is to
+                        bring academic guidance, campus assistance
+                        and student services together in one place.
+                    </p>
+
+                    <ul class="about-list">
+                        <li>✓ Simple, student-friendly assistance</li>
+                        <li>✓ Help finding relevant university information</li>
+                        <li>✓ Clear responses when information is unavailable</li>
+                        <li>✓ A dedicated faculty cabin search section</li>
+                    </ul>
+
+                    <button class="primary-button" data-open-chat>
+                        Talk to Devagya →
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- HELP DESK -->
+        <section class="help-section" id="help">
+            <div class="help-container">
+                <span class="section-eyebrow">NEED ASSISTANCE?</span>
+
+                <h2>Have a Question? Let's Find an Answer.</h2>
+
+                <p>
+                    Ask Devagya about exams, university events,
+                    faculty cabins or student services.
+                </p>
+
+                <button class="help-button" data-open-chat>
+                    💬 Ask Devagya Now
+                </button>
+
+                <small>
+                    For important academic decisions, verify details
+                    with official university announcements.
+                </small>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+    <footer class="site-footer">
+        <div class="footer-container">
+
+            <a href="#home" class="brand footer-brand">
+                <div class="brand-logo">D</div>
+                <div class="brand-text">
+                    <h2>DEVAGYA</h2>
+                    <span>GLA UNIVERSITY</span>
+                </div>
+            </a>
+
+            <p>
+                A student assistance portal concept for GLA University.
+            </p>
+
+            <div class="footer-links">
+                <a href="#home">Home</a>
+                <a href="#services">Services</a>
+                <a href="#faculty-finder">Faculty Finder</a>
+                <a href="#help">Help Desk</a>
+            </div>
+
+            <p class="footer-copyright">
+                © 2026 Devagya Student Assistant. Student project demo.
+            </p>
+
+        </div>
+    </footer>
+
+
+    <!-- CHAT LAUNCHER -->
+    <button
+        class="chat-launcher"
+        id="chatLauncher"
+        aria-label="Open Devagya chat"
+        aria-controls="chatWidget"
+        aria-expanded="false">
+        <span class="launcher-emoji">🙋‍♂️</span>
+        <span class="launcher-text">Ask Devagya</span>
+    </button>
+
+
+    <!-- CHAT WIDGET -->
+    <section
+        class="chat-widget"
+        id="chatWidget"
+        aria-label="Devagya Student Assistant"
+        aria-hidden="true">
+
+        <div class="chat-header">
+
+            <div class="chat-header-profile">
+                <div class="chat-avatar">🙋‍♂️</div>
+
+                <div>
+                    <h3>Devagya Assistant</h3>
+                    <p>
+                        <span class="online-dot"></span>
+                        Student Help Desk
+                    </p>
+                </div>
+            </div>
+
+            <div class="chat-header-actions">
+                <button
+                    id="clearChat"
+                    class="chat-clear"
+                    aria-label="Clear chat"
+                    title="Clear chat">
+                    ↻
+                </button>
+
+                <button
+                    id="closeChat"
+                    class="chat-close"
+                    aria-label="Close chat">
+                    ×
+                </button>
+            </div>
+
+        </div>
+
+
+        <div class="chat-body" id="chatBody">
+
+            <div class="chat-welcome" id="chatWelcome">
+                <div class="welcome-avatar">🙋‍♂️</div>
+
+                <h3>Hi! I'm Devagya.</h3>
+
+                <p>
+                    I'm here to help you navigate university life.
+                    What would you like to know today?
+                </p>
+            </div>
+
+            <div
+                class="chat-messages"
+                id="chatMessages"
+                aria-live="polite">
+            </div>
+
+            <div class="typing-indicator" id="typing" hidden>
+                <span></span>
+                <span></span>
+                <span></span>
+                <small>Devagya is thinking...</small>
+            </div>
+
+        </div>
+
+
+        <div class="chat-quick-prompts" id="quickPrompts">
+            <button data-question="How can I find official exam dates?">
+                📅 Exam dates
+            </button>
+
+            <button data-question="What are the upcoming university events?">
+                🎉 Events
+            </button>
+
+            <button data-question="Help me find a faculty cabin.">
+                🏢 Faculty cabin
+            </button>
+
+            <button data-question="Where can I get help with university fees?">
+                💳 Fee help
+            </button>
+        </div>
+
+
+        <form class="chat-form" id="chatForm">
+
+            <input
+                type="text"
+                id="chatInput"
+                placeholder="Ask your university question..."
+                autocomplete="off"
+                aria-label="Type your question"
+                required>
+
+            <button
+                type="submit"
+                id="sendMessage"
+                aria-label="Send message">
+                ➤
+            </button>
+
+        </form>
+
+        <div class="chat-disclaimer">
+            Demo assistant. Verify important dates and policies
+            with official university sources.
+        </div>
+
+    </section>
+
+
+    <!-- JAVASCRIPT -->
+    <script src="script.js"></script>
+
+</body>
+</html>
