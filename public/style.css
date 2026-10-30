@@ -1769,3 +1769,29 @@ section {
         font-size: 9px;
     }
 }
+
+
+/* FOLLOW-UP SUGGESTION CHIPS */
+.suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.suggestions button {
+    padding: 7px 11px;
+    border: 1px solid #cddcf7;
+    border-radius: 18px;
+    background: #f5f8ff;
+    color: #2459d3;
+    font-size: 11px;
+    font-weight: 650;
+    text-align: left;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.suggestions button:hover {
+    border-color: #2459d3;
+    background: #eaf1ff;
+}

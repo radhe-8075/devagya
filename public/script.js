@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("facultySearchResults");
 
     let isSending = false;
+    let chatContext = null; // remembers the last topic for follow-up questions
 
     // 2. OPEN AND CLOSE CHAT
     function openChat() {
@@ -106,7 +107,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     // 5. DISPLAY CHAT MESSAGES SAFELY
-    function addMessage(message, sender) {
+    function addMessage(message, sender, suggestions) {
         if (!chatMessages) return;
 
         const messageWrapper = document.createElement("div");
@@ -125,6 +126,23 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         messageWrapper.append(bubble, time);
+
+        // Clickable follow-up chips under the bot's answer.
+        if (Array.isArray(suggestions) && suggestions.length) {
+            const chips = document.createElement("div");
+            chips.className = "suggestions";
+
+            suggestions.slice(0, 3).forEach(function (text) {
+                const chip = document.createElement("button");
+                chip.type = "button";
+                chip.dataset.question = String(text);
+                chip.textContent = String(text);
+                chips.appendChild(chip);
+            });
+
+            messageWrapper.appendChild(chips);
+        }
+
         chatMessages.appendChild(messageWrapper);
 
         if (chatWelcome) {
@@ -164,6 +182,14 @@ document.addEventListener("DOMContentLoaded", function () {
         isSending = true;
 
         openChat();
+
+        // Remove old follow-up chips before the new exchange.
+        if (chatMessages) {
+            chatMessages.querySelectorAll(".suggestions").forEach(function (el) {
+                el.remove();
+            });
+        }
+
         addMessage(cleanQuestion, "user");
 
         if (chatInput) {
@@ -197,7 +223,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     // IMPORTANT: server.js expects "question"
                     body: JSON.stringify({
-                        question: cleanQuestion
+                        question: cleanQuestion,
+                        context: chatContext
                     })
                 });
             } catch (networkError) {
@@ -237,7 +264,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 );
             }
 
-            addMessage(answer, "bot");
+            if (data.context) {
+                chatContext = data.context;
+            }
+
+            addMessage(answer, "bot", data.suggestions);
 
         } catch (error) {
             console.error("Chat request failed:", error);
@@ -293,6 +324,8 @@ document.addEventListener("DOMContentLoaded", function () {
             if (chatMessages) {
                 chatMessages.replaceChildren();
             }
+
+            chatContext = null;
 
             if (chatWelcome) {
                 chatWelcome.style.display = "";
