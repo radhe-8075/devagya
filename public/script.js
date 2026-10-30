@@ -31,6 +31,24 @@ document.addEventListener("DOMContentLoaded", function () {
     let isSending = false;
     let chatContext = null; // remembers the last topic for follow-up questions
 
+    const CLIENT_MESSAGES = {
+        timeout: {
+            en: "The server did not respond in time. Please try again.",
+            hi: "सर्वर ने समय पर जवाब नहीं दिया। कृपया फिर से कोशिश करें।",
+            hinglish: "Server ne time par jawab nahi diya. Dobara try karo."
+        },
+        offline: {
+            en: "Could not reach the server. Check your internet and try again.",
+            hi: "सर्वर से कनेक्ट नहीं हो पाया। इंटरनेट जाँचकर फिर से कोशिश करें।",
+            hinglish: "Server se connect nahi ho paaya. Internet check karke dobara try karo."
+        }
+    };
+
+    function clientMessage(key) {
+        const lang = (chatContext && chatContext.lang) || "en";
+        return CLIENT_MESSAGES[key][lang] || CLIENT_MESSAGES[key].en;
+    }
+
     // 2. OPEN AND CLOSE CHAT
     function openChat() {
         if (!chatWidget) return;
@@ -230,8 +248,8 @@ document.addEventListener("DOMContentLoaded", function () {
             } catch (networkError) {
                 throw new Error(
                     networkError.name === "AbortError"
-                        ? "Server ne time par jawab nahi diya. Dobara try karo."
-                        : "Server se connect nahi ho paaya. Internet check karke dobara try karo."
+                        ? clientMessage("timeout")
+                        : clientMessage("offline")
                 );
             } finally {
                 window.clearTimeout(timer);
