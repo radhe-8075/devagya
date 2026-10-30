@@ -9,7 +9,7 @@ Devagya is a web chatbot that answers routine campus questions in English, Hindi
 > **All university data in this project is fictional demo data.** Answers are labelled
 > "Demo data — official university information nahi hai".
 
-**Live demo:** `<paste your Vercel link here>`  ·  **Repository:** `<paste your GitHub link here>`
+**Live demo:** `<https://devagya-encnortvr-neeraj-8aa3.vercel.app/>`  ·  **Repository:** `<https://github.com/radhe-8075/devagya>`
 
 ---
 
