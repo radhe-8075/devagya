@@ -32,7 +32,7 @@ Express server (server.js)  ── GET /api/health
 |---|---|
 | Chat UI with quick prompts and clickable follow-up suggestions | Implemented |
 | Intent detection: faculty, room, fee, exam, paper, campus, hostel, academic, scholarship, certificate/document, intro | Implemented |
-| English / Hindi / Hinglish questions | Implemented (rule based) |
+| English / Hindi (Devanagari) / Hinglish questions, **answered in the language of the question** | Implemented (rule based) |
 | Typo tolerance (e.g. "facluty", "hostle") | Implemented |
 | Follow-up memory (e.g. "uska room kaunsa hai?", "aur MBA ki?") | Implemented |
 | Honest fallback for unknown questions and missing records | Implemented |
@@ -62,11 +62,12 @@ Deployed on Vercel from the `main` branch; static files are served from `public/
 
 ## 3. Tests
 
-`npm test` starts the real server and checks **32 cases**: 25 chat scenarios (including 4 follow-up
-conversations and 3 typo/Hinglish cases), empty and very long input, the health endpoint, that private
-files (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
+`npm test` starts the real server and checks **46 cases**: chat scenarios in English, Hindi and Hinglish
+(including follow-up conversations and typo cases), that every suggestion button in all three languages
+leads to a real answer, empty and very long input, the health endpoint, that private files
+(`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Latest run: **32 passed, 0 failed.**
+Latest run: **46 passed, 0 failed.**
 
 ### Sample inputs and outputs
 
@@ -78,11 +79,14 @@ Latest run: **32 passed, 0 failed.**
 | `Dr. Neha Verma CSE` then `uska room kaunsa hai?` | `👤 Dr. Neha Verma` · `📍 Room 302, Academic Block A, 3rd Floor` |
 | `B.Tech CSE tuition fee` then `aur MBA ki?` | `💳 MBA MBA — tuition fee` · `₹90,000 per semester (2026-2027)` |
 | `Room 9999 kis block mein hai?` | `Room 9999 ka record nahi mila. Main block guess nahi karunga.` |
+| `Where is the library?` | `🏛️ Central Library` · `📍 Library Block L, Ground Floor` (English answer) |
+| `लाइब्रेरी कहाँ है?` | Same record, with the demo-data notice in Hindi |
 
 ## 4. Known limitations and failure cases
 
 - The knowledge base is small and fictional; real deployment needs approved university records.
-- Understanding is rule based, so unusual phrasings can fall back to "samajh nahi aaya".
+- Understanding is rule based, so unusual phrasings can fall back to a polite "I couldn't understand" reply (in the user's language) with suggested questions.
+- Hindi support covers common words and phrases, not every possible sentence.
 - Some records are marked "to be confirmed" (English/Maths faculty cabins, hostel and café locations); the bot says so instead of guessing.
 - The demo has three faculty records with the same name (different departments), so a name-only query returns all matches.
 - Events, certificates and documents have no records yet.

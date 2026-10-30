@@ -22,9 +22,6 @@ const ai = hasRealKey
   ? new OpenAI({ apiKey: rawKey, timeout: 8000, maxRetries: 0 })
   : null;
 
-const DEMO_NOTICE =
-  "\n\n⚠️ Demo data — official university information nahi hai.";
-
 function normalize(value = "") {
   return String(value)
     .toLowerCase()
@@ -119,8 +116,37 @@ function fuzzyFix(text) {
     .join(" ");
 }
 
+// Common Hindi (Devanagari) words mapped to the English words the matcher knows.
+const HINDI_ALIASES = [
+  ["लाइब्रेरी", "library"], ["पुस्तकालय", "library"], ["कैंटीन", "canteen"],
+  ["अकाउंट्स", "accounts"], ["अकाउंट", "accounts"], ["ऑफिस", "office"],
+  ["ऑफ़िस", "office"], ["एडमिशन", "admission"], ["स्टूडेंट", "student"],
+  ["सर्विसेज", "services"], ["डेस्क", "desk"], ["इंग्लिश", "english"],
+  ["अंग्रेज़ी", "english"], ["अंग्रेजी", "english"], ["गणित", "maths"],
+  ["हॉस्टल", "hostel"], ["लड़कियों", "girls"], ["लड़कों", "boys"],
+  ["फीस", "fee"], ["ट्यूशन", "tuition"], ["ट्रांसपोर्ट", "transport"],
+  ["परीक्षा", "exam"], ["अटेंडेंस", "attendance"], ["टाइमटेबल", "timetable"],
+  ["स्कॉलरशिप", "scholarship"], ["रूम", "room"], ["कमरा", "room"],
+  ["टीचर", "teacher"], ["अध्यापक", "teacher"], ["शिक्षक", "teacher"],
+  ["लिस्ट", "list"], ["उसका", "uska"], ["उनका", "unka"], ["इसका", "iska"],
+  ["उसकी", "uski"], ["इसकी", "iski"], ["सेमेस्टर", "semester"], ["पेपर", "paper"]
+]
+  .map(([hindi, english]) => [normalize(hindi), english])
+  .filter(([hindi]) => hindi.length >= 2)
+  .sort((a, b) => b[0].length - a[0].length);
+
+function applyAliases(text) {
+  let out = text;
+
+  for (const [hindi, english] of HINDI_ALIASES) {
+    out = out.split(hindi).join(" " + english + " ");
+  }
+
+  return out.replace(/\s+/g, " ").trim();
+}
+
 function extractDetails(question) {
-  const q = fuzzyFix(normalize(question));
+  const q = fuzzyFix(applyAliases(normalize(question)));
 
   const course = contains(q, [
     "mba",
@@ -342,6 +368,8 @@ function extractDetails(question) {
   ]);
 
   const paperIntent = contains(q, [
+    "paper",
+    "papers",
     "question paper",
     "previous year",
     "previous-year",
@@ -524,6 +552,10 @@ function sanitizeContext(raw) {
 
   const out = {};
 
+  if (["en", "hi", "hinglish"].includes(raw.lang)) {
+    out.lang = raw.lang;
+  }
+
   for (const key of ["intent", "feeType", ...INHERITABLE]) {
     const value = raw[key];
 
@@ -539,7 +571,7 @@ function sanitizeContext(raw) {
       .slice(0, 3);
   }
 
-  return out.intent ? out : null;
+  return out.intent || out.lang ? out : null;
 }
 
 function applyContext(p, ctx) {
@@ -594,7 +626,10 @@ function applyContext(p, ctx) {
 }
 
 async function understandQuestion(question, ctx) {
-  const parsed = applyContext(extractDetails(question), ctx);
+  const parsed = {
+    ...applyContext(extractDetails(question), ctx),
+    lang: detectLang(question, ctx)
+  };
 
   // In these cases, local matching must not be overwritten by AI.
   const protectedIntents = [
@@ -656,10 +691,195 @@ async function understandQuestion(question, ctx) {
 }
 
 // ---------------------------------------------------------------
+// LANGUAGE: answers follow the language of the question
+//   "en" = English, "hi" = Hindi (Devanagari), "hinglish" = Hindi in English letters
+// ---------------------------------------------------------------
+const HINGLISH_WORDS = [
+  "hai", "hain", "kahan", "kaun", "kon", "kitni", "kitna", "kab", "batao",
+  "bataiye", "mujhe", "kya", "ka", "ki", "ke", "ko", "mein", "nahi", "aur",
+  "uska", "uski", "iska", "iski", "tum", "aap", "chahiye", "lagega", "milega",
+  "kaise", "kidhar", "hoga", "wala", "wali", "sab", "zyada", "paisa",
+  "baithte", "baithti", "dikhao", "batana", "karo"
+];
+
+function detectLang(question, ctx) {
+  const text = String(question || "");
+
+  if (/[ऀ-ॿ]/.test(text)) return "hi";
+
+  const tokens = normalize(text).split(" ");
+
+  if (tokens.some(token => HINGLISH_WORDS.includes(token))) return "hinglish";
+
+  // Short English-looking follow-ups ("MBA?") keep the earlier language.
+  if (ctx?.lang && tokens.length <= 3) return ctx.lang;
+
+  return "en";
+}
+
+const MSG = {
+  demo: {
+    en: "⚠️ Demo data — not official university information.",
+    hi: "⚠️ डेमो डेटा — यह विश्वविद्यालय की आधिकारिक जानकारी नहीं है।",
+    hinglish: "⚠️ Demo data — official university information nahi hai."
+  },
+  typeQuestion: {
+    en: "Please type your question first.",
+    hi: "कृपया पहले अपना सवाल लिखें।",
+    hinglish: "Pehle apna sawaal type karo."
+  },
+  serverError: {
+    en: "Something went wrong. Please try again.",
+    hi: "कुछ गड़बड़ हो गई। कृपया फिर से कोशिश करें।",
+    hinglish: "Request process nahi ho paayi. Dobara try karo."
+  },
+  unknown: {
+    en: "I couldn't fully understand that. I can help with teachers, fees, exams, rooms, hostels, campus locations, question papers and scholarships. Try one of the questions below 👇",
+    hi: "मैं यह पूरी तरह समझ नहीं पाया। मैं टीचर, फीस, परीक्षा, रूम, हॉस्टल, कैंपस की जगहों, प्रश्न पत्र और स्कॉलरशिप में मदद कर सकता हूँ। नीचे दिए सवालों में से कोई आज़माएँ 👇",
+    hinglish: "Ye sawaal mujhe poori tarah samajh nahi aaya. Main teachers, fees, exams, rooms, hostels, campus locations, papers aur scholarship mein help kar sakta hoon. Neeche se koi sawaal try karo 👇"
+  },
+  unrelated: {
+    en: "I only help with university topics: teachers, fees, rooms, exams, question papers, campus locations, hostels, events, certificates, documents and scholarships.",
+    hi: "मैं सिर्फ़ विश्वविद्यालय से जुड़े विषयों में मदद करता हूँ: टीचर, फीस, रूम, परीक्षा, प्रश्न पत्र, कैंपस की जगहें, हॉस्टल, इवेंट, सर्टिफिकेट, दस्तावेज़ और स्कॉलरशिप।",
+    hinglish: "Main university-related topics mein help karta hoon: teachers, fees, rooms, exams, question papers, campus locations, hostels, events, certificates, documents aur scholarship guidance."
+  },
+  noFaculty: {
+    en: s => `No demo record found for ${s ? s + " teacher" : "faculty"}. I won't guess.`,
+    hi: s => `${s ? s + " के टीचर" : "फैकल्टी"} का डेमो रिकॉर्ड नहीं मिला। मैं अंदाज़ा नहीं लगाऊँगा।`,
+    hinglish: s => `Matching ${s ? `${s} subject teacher` : "faculty"} ka demo record nahi mila. Main kisi teacher ka subject guess nahi karunga.`
+  },
+  multiFaculty: {
+    en: n => `I found ${n} matching faculty records:`,
+    hi: n => `मुझे ${n} मिलते-जुलते फैकल्टी रिकॉर्ड मिले:`,
+    hinglish: n => `Mujhe ${n} matching faculty records mile:`
+  },
+  specifyDept: {
+    en: "Tell me the department or designation and I'll find the right one.",
+    hi: "विभाग या पद बताइए, मैं सही व्यक्ति ढूँढ दूँगा।",
+    hinglish: "Department ya designation batao, main sahi wala dhoondh dunga."
+  },
+  whichTeacher: {
+    en: "Whose room do you need? Tell me the teacher's name or subject.",
+    hi: "किस टीचर का रूम चाहिए? टीचर का नाम या विषय बताइए।",
+    hinglish: "Kis teacher ka room chahiye? Teacher ka naam ya subject batao."
+  },
+  cabinUnknown: {
+    en: "Cabin location not confirmed yet",
+    hi: "केबिन की जगह अभी पक्की नहीं है",
+    hinglish: "Cabin location abhi confirm nahi hai"
+  },
+  needRoom: {
+    en: "Please give a room number, for example: Which block is Room 3001 in?",
+    hi: "कृपया रूम नंबर बताइए, जैसे: रूम 3001 किस ब्लॉक में है?",
+    hinglish: "Room number batao, jaise: Room 3001 kis block mein hai?"
+  },
+  roomNotFound: {
+    en: n => `No record for Room ${n}. I won't guess the block.`,
+    hi: n => `रूम ${n} का रिकॉर्ड नहीं मिला। मैं ब्लॉक का अंदाज़ा नहीं लगाऊँगा।`,
+    hinglish: n => `Room ${n} ka record nahi mila. Main block guess nahi karunga.`
+  },
+  feeNotFound: {
+    en: "No demo record for this fee type. Tell me the course, branch and fee type (for example: B.Tech CSE hostel fee). I won't guess missing amounts.",
+    hi: "इस फीस का डेमो रिकॉर्ड नहीं मिला। कोर्स, ब्रांच और फीस का प्रकार बताइए (जैसे: B.Tech CSE हॉस्टल फीस)। मैं अंदाज़े से राशि नहीं बताऊँगा।",
+    hinglish: "Is fee type ka demo record nahi mila. Course, branch aur fee type batao (jaise: B.Tech CSE hostel fee). Missing fee ka amount guess nahi kiya jayega."
+  },
+  paperNeed: {
+    en: "For a question paper I need the branch, semester and subject. Example: B.Tech CSE semester 3 Data Structures 2025 paper.",
+    hi: "प्रश्न पत्र के लिए ब्रांच, सेमेस्टर और विषय बताइए। उदाहरण: B.Tech CSE सेमेस्टर 3 Data Structures 2025 पेपर।",
+    hinglish: "Paper ke liye branch, semester aur subject batao. Example: B.Tech CSE semester 3 Data Structures ka 2025 paper do."
+  },
+  paperNotFound: {
+    en: "No demo paper record for this combination. Check the subject, branch, semester or year.",
+    hi: "इस संयोजन का डेमो पेपर रिकॉर्ड नहीं मिला। विषय, ब्रांच, सेमेस्टर या वर्ष जाँचें।",
+    hinglish: "Is combination ka demo paper record nahi mila. Subject, branch, semester ya year check karo."
+  },
+  paperHeader: {
+    en: s => `📄 ${s} — previous year papers`,
+    hi: s => `📄 ${s} — पिछले वर्षों के प्रश्न पत्र`,
+    hinglish: s => `📄 ${s} — previous year papers`
+  },
+  pdfMissing: {
+    en: "PDF not available yet",
+    hi: "PDF अभी उपलब्ध नहीं है",
+    hinglish: "PDF abhi available nahi hai"
+  },
+  examNotFound: {
+    en: "No matching exam schedule found. Tell me the course, branch, semester and subject.",
+    hi: "कोई मिलता-जुलता परीक्षा कार्यक्रम नहीं मिला। कोर्स, ब्रांच, सेमेस्टर और विषय बताइए।",
+    hinglish: "Matching exam schedule nahi mila. Course, branch, semester aur subject batao."
+  },
+  campusNotFound: {
+    en: "No demo record for that place. You can ask about the Library, Accounts Office, Admissions Office or Student Services Desk. The exact location of Cafe GD and Subway is not confirmed yet.",
+    hi: "उस जगह का डेमो रिकॉर्ड नहीं मिला। आप लाइब्रेरी, अकाउंट्स ऑफिस, एडमिशन ऑफिस या स्टूडेंट सर्विसेज डेस्क के बारे में पूछ सकते हैं। Cafe GD और Subway की सटीक जगह अभी पक्की नहीं है।",
+    hinglish: "Is campus place ka demo record nahi mila. Library, Accounts Office, Admissions Office ya Student Services Desk pooch sakte ho. Cafe GD/Subway ki exact location abhi confirm nahi hai."
+  },
+  locUnknown: {
+    en: "Exact location not confirmed yet",
+    hi: "सटीक जगह अभी पक्की नहीं है",
+    hinglish: "Exact location abhi confirm nahi hai"
+  },
+  academicNotFound: {
+    en: "No matching academic record. Try a topic like attendance or timetable.",
+    hi: "कोई मिलता-जुलता अकादमिक रिकॉर्ड नहीं मिला। अटेंडेंस या टाइमटेबल जैसा विषय पूछें।",
+    hinglish: "Matching academic record nahi mila. Attendance ya timetable jaise topic specify karo."
+  },
+  hostelNone: {
+    en: "No demo hostel record found.",
+    hi: "हॉस्टल का डेमो रिकॉर्ड नहीं मिला।",
+    hinglish: "Hostel ka demo record nahi mila."
+  },
+  hostelLocUnknown: {
+    en: " — location not confirmed yet",
+    hi: " — जगह अभी पक्की नहीं है",
+    hinglish: " — location abhi confirm nahi hai"
+  },
+  hostelNote: {
+    en: "Note: these are sample hostel names. Official names and locations are yet to be confirmed.",
+    hi: "नोट: ये नमूना हॉस्टल नाम हैं। आधिकारिक नाम और जगहें अभी पक्की होनी बाकी हैं।",
+    hinglish: "Note: ye sample hostel names hain. Official names aur locations confirm karne baaki hain."
+  },
+  languagesLabel: { en: "🗣️ Languages: ", hi: "🗣️ भाषाएँ: ", hinglish: "🗣️ Languages: " },
+  createdByLabel: { en: "👨‍💻 Created by: ", hi: "👨‍💻 निर्माता: ", hinglish: "👨‍💻 Created by: " },
+  noEvents: {
+    en: "There are no demo event records yet. I won't guess dates or venues.",
+    hi: "इवेंट के डेमो रिकॉर्ड अभी उपलब्ध नहीं हैं। मैं तारीख या जगह का अंदाज़ा नहीं लगाऊँगा।",
+    hinglish: "Events ke demo records abhi available nahi hain. Main date ya venue guess nahi karunga."
+  },
+  noCertDoc: {
+    en: kind => `There are no demo ${kind} records yet. Please confirm the exact process with the relevant university office.`,
+    hi: kind => `${kind === "certificate" ? "सर्टिफिकेट" : "दस्तावेज़"} के डेमो रिकॉर्ड अभी उपलब्ध नहीं हैं। सही प्रक्रिया संबंधित विश्वविद्यालय कार्यालय से पूछें।`,
+    hinglish: kind => `Is ${kind} ke demo records abhi available nahi hain. Exact process relevant university office se confirm karein.`
+  },
+  whichCertDoc: {
+    en: kind => `Which ${kind} do you need? Tell me its name.`,
+    hi: kind => `कौन सा ${kind === "certificate" ? "सर्टिफिकेट" : "दस्तावेज़"} चाहिए? उसका नाम बताइए।`,
+    hinglish: kind => `Kaunsa ${kind} chahiye? Uska naam batao.`
+  },
+  scholarshipDocs: {
+    en: "UP Scholarship is a scheme of the Uttar Pradesh Government.\n\nA general checklist may include Aadhaar details, a photo, income certificate, domicile/residence certificate, previous marksheet, admission/course proof, fee receipt and bank details.\n\nRequirements can change with your category and whether the application is fresh or renewal. Verify the final list on the official UP Scholarship portal.",
+    hi: "UP स्कॉलरशिप उत्तर प्रदेश सरकार की योजना है।\n\nसामान्य चेकलिस्ट में आधार की जानकारी, फोटो, आय प्रमाण पत्र, निवास प्रमाण पत्र, पिछली मार्कशीट, एडमिशन/कोर्स का प्रमाण, फीस रसीद और बैंक विवरण हो सकते हैं।\n\nश्रेणी और नए/नवीनीकरण आवेदन के अनुसार ज़रूरतें बदल सकती हैं। अंतिम सूची आधिकारिक UP Scholarship पोर्टल पर जाँचें।",
+    hinglish: "UP Scholarship Uttar Pradesh Government ki scheme hai.\n\nGeneral checklist mein Aadhaar details, photo, income certificate, domicile/residence certificate, previous marksheet, admission/course proof, fee receipt aur bank details ho sakte hain.\n\nCategory aur fresh/renewal application ke hisaab se requirements badal sakti hain. Current session ki final list official UP Scholarship portal par verify karein."
+  },
+  scholarshipInfo: {
+    en: "UP Scholarship is a scheme of the Uttar Pradesh Government, separate from the university's own scholarship.\n\nI can give guidance on the documents checklist, fresh/renewal application, status or hard-copy submission. Verify the final requirements on the official portal.",
+    hi: "UP स्कॉलरशिप उत्तर प्रदेश सरकार की योजना है, जो विश्वविद्यालय की अपनी स्कॉलरशिप से अलग है।\n\nमैं दस्तावेज़ चेकलिस्ट, नया/नवीनीकरण आवेदन, स्टेटस या हार्ड कॉपी जमा करने के बारे में मार्गदर्शन दे सकता हूँ। अंतिम ज़रूरतें आधिकारिक पोर्टल पर जाँचें।",
+    hinglish: "UP Scholarship Uttar Pradesh Government ki scheme hai, university ki apni scholarship se alag.\n\nMain documents checklist, fresh/renewal application, status ya hard-copy submission guidance de sakta hoon. Current session ki final requirements official portal se verify karein."
+  }
+};
+
+// Look up a message in the user's language (falls back to Hinglish).
+function tr(lang, key, ...args) {
+  const entry = MSG[key] || {};
+  const value = entry[lang] ?? entry.hinglish;
+
+  return typeof value === "function" ? value(...args) : value;
+}
+
+// ---------------------------------------------------------------
 // ANSWER HELPERS (clean, emoji-based formatting)
 // ---------------------------------------------------------------
-function demoAnswer(text) {
-  return text + DEMO_NOTICE;
+function demoAnswer(text, lang) {
+  return text + "\n\n" + tr(lang, "demo");
 }
 
 function isUnknownValue(value) {
@@ -679,19 +899,19 @@ function formatDate(iso) {
   }
 }
 
-function facultyLocation(f) {
+function facultyLocation(f, lang) {
   if (isUnknownValue(f.room)) {
-    return "Cabin location abhi confirm nahi hai";
+    return tr(lang, "cabinUnknown");
   }
 
   return `Room ${f.room}, ${f.block}, ${f.floor}`;
 }
 
-function facultyCard(f) {
+function facultyCard(f, lang) {
   return (
     `👤 ${f.name}\n` +
     `🏫 ${f.department} • ${f.designation} • ${f.course}\n` +
-    `📍 ${facultyLocation(f)}` +
+    `📍 ${facultyLocation(f, lang)}` +
     (f.subjects?.length ? `\n📚 ${f.subjects.join(", ")}` : "")
   );
 }
@@ -733,44 +953,43 @@ function findFaculty(p) {
   });
 
   if (!list.length) {
-    return {
-      answer: `Matching ${p.subject ? `${p.subject} subject teacher` : "faculty"} ka demo record nahi mila. Main kisi teacher ka subject guess nahi karunga.`,
-      ids: []
-    };
+    return { answer: tr(p.lang, "noFaculty", p.subject), ids: [] };
   }
 
   if (list.length > 1) {
     return {
       answer: demoAnswer(
-        `Mujhe ${list.length} matching faculty records mile:\n\n` +
-        list.map(facultyCard).join("\n\n") +
-        (p.name ? "\n\nDepartment ya designation batao, main sahi wala dhoondh dunga." : "")
+        tr(p.lang, "multiFaculty", list.length) + "\n\n" +
+        list.map(f => facultyCard(f, p.lang)).join("\n\n") +
+        (p.name ? "\n\n" + tr(p.lang, "specifyDept") : ""),
+        p.lang
       ),
       ids: []
     };
   }
 
   return {
-    answer: demoAnswer(facultyCard(list[0])),
+    answer: demoAnswer(facultyCard(list[0], p.lang), p.lang),
     ids: [list[0].id]
   };
 }
 
-function findFacultyRoom(ids = []) {
+function findFacultyRoom(ids = [], lang) {
   const list = (knowledgeBase.faculties || []).filter(f => ids.includes(f.id));
 
   if (!list.length) {
-    return "Kis teacher ka room chahiye? Teacher ka naam ya subject batao.";
+    return tr(lang, "whichTeacher");
   }
 
   return demoAnswer(
-    list.map(f => `👤 ${f.name}\n📍 ${facultyLocation(f)}`).join("\n\n")
+    list.map(f => `👤 ${f.name}\n📍 ${facultyLocation(f, lang)}`).join("\n\n"),
+    lang
   );
 }
 
 function findRoom(p) {
   if (!p.room) {
-    return "Room number batao, jaise: Room 3001 kis block mein hai?";
+    return tr(p.lang, "needRoom");
   }
 
   const rooms = (knowledgeBase.rooms || []).filter(
@@ -778,13 +997,14 @@ function findRoom(p) {
   );
 
   if (!rooms.length) {
-    return `Room ${p.room} ka record nahi mila. Main block guess nahi karunga.`;
+    return tr(p.lang, "roomNotFound", p.room);
   }
 
   return demoAnswer(
     rooms.map(r =>
-      `📍 Room ${r.room} — ${r.block}, ${r.floor}\n🏷️ ${r.purpose || "Purpose not specified"}`
-    ).join("\n\n")
+      `📍 Room ${r.room} — ${r.block}, ${r.floor}\n🏷️ ${r.purpose || "—"}`
+    ).join("\n\n"),
+    p.lang
   );
 }
 
@@ -796,20 +1016,21 @@ function findFee(p) {
   );
 
   if (!fees.length) {
-    return "Is fee type ka demo record nahi mila. Course, branch aur fee type batao (jaise: B.Tech CSE hostel fee). Missing fee ka amount guess nahi kiya jayega.";
+    return tr(p.lang, "feeNotFound");
   }
 
   return demoAnswer(
     fees.map(f =>
       `💳 ${f.course} ${f.branch} — ${f.feeType} fee\n` +
       `₹${Number(f.amount).toLocaleString("en-IN")} per ${f.period} (${f.academicYear})`
-    ).join("\n\n")
+    ).join("\n\n"),
+    p.lang
   );
 }
 
 function findPaper(p) {
   if (!p.branch || !p.subject || !p.semester) {
-    return "Paper ke liye branch, semester aur subject batao. Example: B.Tech CSE semester 3 Data Structures ka 2025 paper do.";
+    return tr(p.lang, "paperNeed");
   }
 
   const papers = (knowledgeBase.papers || []).filter(x =>
@@ -821,19 +1042,20 @@ function findPaper(p) {
   );
 
   if (!papers.length) {
-    return "Is combination ka demo paper record nahi mila. Subject, branch, semester ya year check karo.";
+    return tr(p.lang, "paperNotFound");
   }
 
   return demoAnswer(
-    `📄 ${p.subject} — previous year papers\n\n` +
+    tr(p.lang, "paperHeader", p.subject) + "\n\n" +
     papers.map(paper => {
       const safeFile = path.basename(paper.file);
       const filePath = path.join(__dirname, "public", "papers", safeFile);
 
       return fs.existsSync(filePath)
         ? `• ${paper.year}: /papers/${encodeURIComponent(safeFile)}`
-        : `• ${paper.year}: PDF abhi available nahi hai`;
-    }).join("\n")
+        : `• ${paper.year}: ${tr(p.lang, "pdfMissing")}`;
+    }).join("\n"),
+    p.lang
   );
 }
 
@@ -847,21 +1069,19 @@ function findExam(p) {
   );
 
   if (!exams.length) {
-    return {
-      answer: "Matching exam schedule nahi mila. Course, branch, semester aur subject batao.",
-      records: []
-    };
+    return { answer: tr(p.lang, "examNotFound"), records: [] };
   }
 
   return {
     records: exams,
     answer: demoAnswer(
-    exams.map(e =>
-      `📅 ${e.subject} — ${e.examType}\n` +
-      `🎓 ${e.course} ${e.branch} • Semester ${e.semester}\n` +
-      `🗓️ ${formatDate(e.date)}  ⏰ ${e.time}\n` +
-      `📍 ${e.venue}`
-    ).join("\n\n")
+      exams.map(e =>
+        `📅 ${e.subject} — ${e.examType}\n` +
+        `🎓 ${e.course} ${e.branch} • Semester ${e.semester}\n` +
+        `🗓️ ${formatDate(e.date)}  ⏰ ${e.time}\n` +
+        `📍 ${e.venue}`
+      ).join("\n\n"),
+      p.lang
     )
   };
 }
@@ -882,17 +1102,18 @@ function findCampus(p) {
   });
 
   if (!list.length) {
-    return "Is campus place ka demo record nahi mila. Library, Accounts Office, Admissions Office ya Student Services Desk pooch sakte ho. Cafe GD/Subway ki exact location abhi confirm nahi hai.";
+    return tr(p.lang, "campusNotFound");
   }
 
   return demoAnswer(
     list.map(c => {
       const where = isUnknownValue(c.block)
-        ? "Exact location abhi confirm nahi hai"
+        ? tr(p.lang, "locUnknown")
         : `${c.block}${c.room ? `, Room ${c.room}` : ""}${c.floor && !isUnknownValue(c.floor) ? `, ${c.floor}` : ""}`;
 
       return `🏛️ ${c.name}\n📍 ${where}`;
-    }).join("\n\n")
+    }).join("\n\n"),
+    p.lang
   );
 }
 
@@ -904,11 +1125,12 @@ function findAcademic(p) {
   );
 
   if (!list.length) {
-    return "Matching academic record nahi mila. Attendance ya timetable jaise topic specify karo.";
+    return tr(p.lang, "academicNotFound");
   }
 
   return demoAnswer(
-    list.map(a => `📌 ${a.type[0].toUpperCase()}${a.type.slice(1)}\n${a.details}`).join("\n\n")
+    list.map(a => `📌 ${a.type[0].toUpperCase()}${a.type.slice(1)}\n${a.details}`).join("\n\n"),
+    p.lang
   );
 }
 
@@ -934,28 +1156,30 @@ function findHostel(p) {
   );
 
   if (!list.length) {
-    return "Hostel ka demo record nahi mila.";
+    return tr(p.lang, "hostelNone");
   }
 
   return demoAnswer(
     list.map(h =>
       `🏠 ${h.name} (${h.type})` +
       (isUnknownValue(h.block) && isUnknownValue(h.location)
-        ? " — location abhi confirm nahi hai"
+        ? tr(p.lang, "hostelLocUnknown")
         : ` — ${h.block}, ${h.location}`)
     ).join("\n") +
-    "\n\nNote: ye sample hostel names hain. Official names aur locations confirm karne baaki hain."
+    "\n\n" + tr(p.lang, "hostelNote"),
+    p.lang
   );
 }
 
-function findIntro() {
+function findIntro(lang) {
   const a = knowledgeBase.assistant || {};
 
   return demoAnswer(
     `🙋‍♂️ ${a.name || "Devagya"} — ${a.role || "University Student Assistance Chatbot"}\n\n` +
     `${a.purpose || "I help with university-related demo information."}\n\n` +
-    `🗣️ Languages: ${(a.languages || ["English", "Hindi", "Hinglish"]).join(", ")}\n` +
-    `👨‍💻 Created by: ${a.createdBy || "The developer of this student-assistance demo project."}`
+    `${tr(lang, "languagesLabel")}${(a.languages || ["English", "Hindi", "Hinglish"]).join(", ")}\n` +
+    `${tr(lang, "createdByLabel")}${a.createdBy || "The developer of this student-assistance demo project."}`,
+    lang
   );
 }
 
@@ -1030,63 +1254,70 @@ async function askN8n(question) {
 }
 
 // ---------------------------------------------------------------
-// FOLLOW-UP SUGGESTIONS (shown as clickable chips under the answer)
+// FOLLOW-UP SUGGESTIONS (clickable chips under the answer, in the user's language)
 // ---------------------------------------------------------------
-function suggestionsFor(intent, facultyIds = []) {
+const SUGGESTIONS = {
+  en: {
+    faculty_withId: ["Where is their room?", "Who is the CSE HOD?", "When is the Data Structures exam?"],
+    faculty: ["Who is the CSE HOD?", "Who teaches Data Structures?", "Where is the library?"],
+    exam: ["What is the B.Tech CSE exam fee?", "Who teaches Data Structures?", "What is the attendance rule?"],
+    fee: ["What is the hostel fee?", "What is the transport fee?", "What is the MBA tuition fee?"],
+    hostel: ["Girls hostel list", "Boys hostel list", "What is the hostel fee?"],
+    campus: ["Where is the library?", "Where is the accounts office?", "Where is the student services desk?"],
+    paper: ["B.Tech CSE exam dates", "Who teaches Data Structures?", "What are the exam fees?"],
+    other: ["When are the exams?", "Who is the English teacher?", "Girls hostel list"]
+  },
+  hinglish: {
+    faculty_withId: ["Uska room kaunsa hai?", "CSE ke HOD kaun hain?", "Data Structures ka exam kab hai?"],
+    faculty: ["CSE ke HOD kaun hain?", "Data Structures ke teacher kaun hain?", "Library kahan hai?"],
+    exam: ["B.Tech CSE exam fee kitni hai?", "Data Structures ke teacher kaun hain?", "Attendance rule kya hai?"],
+    fee: ["Hostel fee kitni hai?", "Transport fee kitni hai?", "MBA tuition fee kitni hai?"],
+    hostel: ["Girls hostel list", "Boys hostel list", "Hostel fee kitni hai?"],
+    campus: ["Library kahan hai?", "Accounts office kahan hai?", "Student services desk kahan hai?"],
+    paper: ["B.Tech CSE exam dates batao", "Data Structures ke teacher kaun hain?", "Exam fees kitni hai?"],
+    other: ["Exam dates kab hain?", "English teacher kaun hai?", "Girls hostel list"]
+  },
+  hi: {
+    faculty_withId: ["उसका रूम कौन सा है?", "CSE के HOD कौन हैं?", "Data Structures की परीक्षा कब है?"],
+    faculty: ["CSE के HOD कौन हैं?", "Data Structures के टीचर कौन हैं?", "लाइब्रेरी कहाँ है?"],
+    exam: ["B.Tech CSE की परीक्षा फीस कितनी है?", "Data Structures के टीचर कौन हैं?", "अटेंडेंस नियम क्या है?"],
+    fee: ["हॉस्टल फीस कितनी है?", "ट्रांसपोर्ट फीस कितनी है?", "MBA की ट्यूशन फीस कितनी है?"],
+    hostel: ["लड़कियों के हॉस्टल की लिस्ट", "लड़कों के हॉस्टल की लिस्ट", "हॉस्टल फीस कितनी है?"],
+    campus: ["लाइब्रेरी कहाँ है?", "अकाउंट्स ऑफिस कहाँ है?", "स्टूडेंट सर्विसेज डेस्क कहाँ है?"],
+    paper: ["B.Tech CSE की परीक्षा तिथियाँ बताइए", "Data Structures के टीचर कौन हैं?", "परीक्षा फीस कितनी है?"],
+    other: ["परीक्षा कब है?", "अंग्रेज़ी के टीचर कौन हैं?", "लड़कियों के हॉस्टल की लिस्ट"]
+  }
+};
+
+function suggestionsFor(intent, facultyIds = [], lang = "hinglish") {
+  const set = SUGGESTIONS[lang] || SUGGESTIONS.hinglish;
+
   switch (intent) {
     case "faculty":
     case "faculty_room":
-      return [
-        ...(facultyIds.length === 1 ? ["Uska room kaunsa hai?"] : []),
-        "CSE ke HOD kaun hain?",
-        "Data Structures ka exam kab hai?"
-      ].slice(0, 3);
+      return facultyIds.length === 1 ? set.faculty_withId : set.faculty;
     case "exam":
-      return [
-        "B.Tech CSE exam fee kitni hai?",
-        "Data Structures ke teacher kaun hain?",
-        "Attendance rule kya hai?"
-      ];
+      return set.exam;
     case "fee":
-      return [
-        "Hostel fee kitni hai?",
-        "Transport fee kitni hai?",
-        "MBA tuition fee kitni hai?"
-      ];
+      return set.fee;
     case "hostel":
-      return [
-        "Girls hostel list",
-        "Boys hostel list",
-        "Hostel fee kitni hai?"
-      ];
+      return set.hostel;
     case "campus":
-      return [
-        "Library kahan hai?",
-        "Accounts office kahan hai?",
-        "Student services desk kahan hai?"
-      ];
+      return set.campus;
     case "paper":
-      return [
-        "B.Tech CSE exam dates batao",
-        "Data Structures ke teacher kaun hain?",
-        "Exam fees kitni hai?"
-      ];
+      return set.paper;
     default:
-      return [
-        "Exam dates kab hain?",
-        "English teacher kaun hai?",
-        "Girls hostel list"
-      ];
+      return set.other;
   }
 }
 
-function findEvents() {
+function findEvents(lang) {
   const events = Array.isArray(knowledgeBase.events)
     ? knowledgeBase.events
     : [];
 
   if (!events.length) {
-    return "Events ke demo records abhi available nahi hain. Main date ya venue guess nahi karunga.";
+    return tr(lang, "noEvents");
   }
 
   return demoAnswer(
@@ -1096,7 +1327,8 @@ function findEvents() {
       `Time: ${e.time || "Not specified"}\n` +
       `Venue: ${e.venue || "Not specified"}\n` +
       `${e.description || ""}`
-    ).join("\n\n")
+    ).join("\n\n"),
+    lang
   );
 }
 
@@ -1106,7 +1338,7 @@ function findCertificateOrDocument(p, kind) {
     : (knowledgeBase.documents || []);
 
   if (!records.length) {
-    return `Is ${kind} ke demo records abhi available nahi hain. Exact process relevant university office se confirm karein.`;
+    return tr(p.lang, "noCertDoc", kind);
   }
 
   const matches = records.filter(r => {
@@ -1120,7 +1352,7 @@ function findCertificateOrDocument(p, kind) {
   });
 
   if (!matches.length) {
-    return `Kaunsa ${kind} chahiye? Uska naam batao.`;
+    return tr(p.lang, "whichCertDoc", kind);
   }
 
   return demoAnswer(
@@ -1129,11 +1361,12 @@ function findCertificateOrDocument(p, kind) {
       `Purpose: ${r.purpose || "Not specified"}\n` +
       `Where to apply: ${r.applyAt || r.office || r.location || "Not specified"}\n` +
       `Documents: ${(r.sampleDocuments || r.requiredDocuments || r.documents || []).join(", ") || "Not specified"}`
-    ).join("\n\n")
+    ).join("\n\n"),
+    p.lang
   );
 }
 
-function scholarshipAnswer(question) {
+function scholarshipAnswer(question, lang) {
   const q = normalize(question);
 
   if (contains(q, [
@@ -1146,17 +1379,10 @@ function scholarshipAnswer(question) {
     "कागजात",
     "what required"
   ])) {
-    return (
-      "UP Scholarship Uttar Pradesh Government ki scheme hai.\n\n" +
-      "General checklist mein Aadhaar details, photo, income certificate, domicile/residence certificate, previous marksheet, admission/course proof, fee receipt aur bank details ho sakte hain.\n\n" +
-      "Category aur fresh/renewal application ke hisaab se requirements badal sakti hain. Current session ki final list official UP Scholarship portal par verify karein."
-    );
+    return tr(lang, "scholarshipDocs");
   }
 
-  return (
-    "UP Scholarship Uttar Pradesh Government ki scheme hai, university ki apni scholarship se alag.\n\n" +
-    "Main documents checklist, fresh/renewal application, status ya hard-copy submission guidance de sakta hoon. Current session ki final requirements official portal se verify karein."
-  );
+  return tr(lang, "scholarshipInfo");
 }
 
 app.get("/api/health", (req, res) => {
@@ -1170,17 +1396,20 @@ app.get("/api/health", (req, res) => {
 });
 
 app.post("/api/chat", async (req, res) => {
+  let lang = "en";
+
   try {
     const question = String(req.body?.question || "").trim().slice(0, 500);
+    const ctx = sanitizeContext(req.body?.context);
 
     if (!question) {
       return res.status(400).json({
-        answer: "Pehle apna sawaal type karo."
+        answer: tr(ctx?.lang || "en", "typeQuestion")
       });
     }
 
-    const ctx = sanitizeContext(req.body?.context);
     const p = await understandQuestion(question, ctx);
+    lang = p.lang;
 
     let answer;
     let facultyIds = [];
@@ -1194,7 +1423,7 @@ app.post("/api/chat", async (req, res) => {
         break;
       }
       case "faculty_room":
-        answer = findFacultyRoom(ctx?.facultyIds);
+        answer = findFacultyRoom(ctx?.facultyIds, p.lang);
         facultyIds = ctx?.facultyIds || [];
         break;
       case "room":
@@ -1219,13 +1448,13 @@ app.post("/api/chat", async (req, res) => {
         answer = findAcademic(p);
         break;
       case "intro":
-        answer = findIntro();
+        answer = findIntro(p.lang);
         break;
       case "hostel":
         answer = findHostel(p);
         break;
       case "event":
-        answer = findEvents();
+        answer = findEvents(p.lang);
         break;
       case "certificate":
         answer = findCertificateOrDocument(p, "certificate");
@@ -1234,18 +1463,18 @@ app.post("/api/chat", async (req, res) => {
         answer = findCertificateOrDocument(p, "document");
         break;
       case "scholarship":
-        answer = scholarshipAnswer(question);
+        answer = scholarshipAnswer(question, p.lang);
         break;
       case "unrelated":
-        answer = "Main university-related topics mein help karta hoon: teachers, fees, rooms, exams, question papers, campus locations, hostels, events, certificates, documents aur scholarship guidance.";
+        answer = tr(p.lang, "unrelated");
         break;
       default: {
         // Local matching did not understand: optionally ask the n8n AI helper.
         const aiAnswer = await askN8n(question);
 
         answer = aiAnswer
-          ? demoAnswer("🤖 " + aiAnswer)
-          : "Ye sawaal mujhe poori tarah samajh nahi aaya. Main teachers, fees, exams, rooms, hostels, campus locations, papers aur scholarship mein help kar sakta hoon. Neeche se koi sawaal try karo 👇";
+          ? demoAnswer("🤖 " + aiAnswer, p.lang)
+          : tr(p.lang, "unknown");
       }
     }
 
@@ -1253,8 +1482,9 @@ app.post("/api/chat", async (req, res) => {
     const keepContext = ["unknown", "unrelated", "intro"].includes(p.intent);
 
     const context = keepContext
-      ? ctx
+      ? { ...(ctx || {}), lang: p.lang }
       : {
+          lang: p.lang,
           intent: p.intent === "faculty_room" ? "faculty" : p.intent,
           course: p.course || learned.course || "",
           branch: p.branch || learned.branch || "",
@@ -1270,13 +1500,14 @@ app.post("/api/chat", async (req, res) => {
       intent: p.intent,
       demoData: true,
       context,
-      suggestions: suggestionsFor(p.intent, facultyIds)
+      lang: p.lang,
+      suggestions: suggestionsFor(p.intent, facultyIds, p.lang)
     });
   } catch (error) {
     console.error("Chat API error:", error);
 
     res.status(500).json({
-      answer: "Request process nahi ho paayi. Dobara try karo."
+      answer: tr(lang, "serverError")
     });
   }
 });
@@ -1284,7 +1515,7 @@ app.post("/api/chat", async (req, res) => {
 // Last-resort error handler so one bad request can never crash the server.
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
-  res.status(500).json({ answer: "Kuch gadbad ho gayi. Dobara try karo." });
+  res.status(500).json({ answer: tr("en", "serverError") });
 });
 
 // Vercel imports the app; locally `node server.js` starts the listener.

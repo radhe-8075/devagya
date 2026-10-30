@@ -30,10 +30,22 @@ const tests = [
   ["Typo: hostle",                  ["hostle list girls"],                           "hostel",  "Girls Hostel 1"],
   ["Hinglish: paisa",               ["kitna paisa lagega hostel ka"],                "fee",     "85,000"],
   ["Word 'sirf' is not 'sir'",      ["sirf ek sawaal hai"],                          "unknown", "samajh nahi aaya"],
-  ["Gibberish gets a safe fallback",["random gibberish xyz"],                        "unknown", "samajh nahi aaya"],
+  ["Gibberish gets a safe fallback (English)", ["random gibberish xyz"],            "unknown", "couldn't fully understand"],
+  ["Unknown Hinglish gets Hinglish fallback", ["sirf ek sawaal hai"],               "unknown", "samajh nahi aaya"],
   ["Follow-up: uska room",          ["Dr. Neha Verma CSE", "uska room kaunsa hai?"], "faculty_room", "Room 302"],
   ["Follow-up: aur MBA ki?",        ["B.Tech CSE tuition fee", "aur MBA ki?"],       "fee",     "90,000"],
   ["Follow-up: iski fees",          ["Data Structures exam kab hai?", "iski fees kitni hai?"], "fee", "75,000"],
+  // ---- language: answers follow the language of the question ----
+  ["English question -> English answer",       ["Where is the library?"],            "campus", "not official university information"],
+  ["English room not found",                   ["Which block is Room 9999 in?"],     "room",   "No record for Room 9999"],
+  ["English exam fee",                         ["What is the exam fee for B.Tech CSE?"], "fee", "2,500"],
+  ["Hindi: library",                           ["लाइब्रेरी कहाँ है?"],                "campus", "डेमो डेटा"],
+  ["Hindi: hostel fee",                        ["हॉस्टल फीस कितनी है?"],              "fee",    "85,000"],
+  ["Hindi: exam date",                         ["परीक्षा कब है?"],                    "exam",   "15 Nov"],
+  ["Hindi: English teacher",                   ["अंग्रेज़ी के टीचर कौन हैं?"],         "faculty","Demo English Faculty"],
+  ["Hindi: girls hostel list",                 ["लड़कियों के हॉस्टल की लिस्ट"],        "hostel", "Girls Hostel 1"],
+  ["Hindi follow-up: उसका रूम",                ["Dr. Neha Verma CSE", "उसका रूम कौन सा है?"], "faculty_room", "Room 302"],
+  ["Hindi unknown gets Hindi fallback",        ["ज़रूरी बात"],                        "unknown","समझ नहीं पाया"],
   ["Follow-up: paper after exam",   ["B.Tech CSE exam dates batao", "Data Structures ka 2025 paper do"], "paper", "2025"]
 ];
 
@@ -75,6 +87,33 @@ async function call(base, question, context) {
   }
 
   // ---- API / safety checks ----
+  // ---- every suggestion chip, in all 3 languages, must lead to a real answer ----
+  const seeds = {
+    en: ["Dr. Neha Verma CSE", "When is the Data Structures exam?", "What is the MBA tuition fee?", "Girls hostel list", "Where is the library?", "B.Tech CSE semester 3 Data Structures 2025 paper", "random gibberish xyz"],
+    hinglish: ["Dr. Neha Verma kahan baithti hain", "Data Structures exam kab hai?", "MBA tuition fee kitni hai?", "Girls hostel ki list batao", "Library kahan hai?", "B.Tech CSE semester 3 Data Structures ka 2025 paper do", "sirf ek sawaal hai"],
+    hi: ["Dr. Neha Verma CSE के टीचर का रूम", "परीक्षा कब है?", "MBA की ट्यूशन फीस कितनी है?", "लड़कियों के हॉस्टल की लिस्ट", "लाइब्रेरी कहाँ है?", "B.Tech CSE सेमेस्टर 3 Data Structures 2025 पेपर", "ज़रूरी बात"]
+  };
+
+  for (const [lang, questions] of Object.entries(seeds)) {
+    let chipCount = 0;
+    const badChips = [];
+
+    for (const seed of questions) {
+      const first = await call(base, seed, null);
+
+      for (const chip of first.body.suggestions || []) {
+        chipCount++;
+        const next = await call(base, chip, first.body.context);
+
+        if (next.body.intent === "unknown" || next.body.lang !== lang) {
+          badChips.push(`"${chip}" -> ${next.body.intent}/${next.body.lang}`);
+        }
+      }
+    }
+
+    report(`All ${chipCount} suggestion chips work (${lang})`, badChips.length === 0, badChips.join("; "));
+  }
+
   const empty = await call(base, "", null);
   report("Empty question is rejected (400)", empty.status === 400, "status " + empty.status);
 
