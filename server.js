@@ -129,7 +129,11 @@ const HINDI_ALIASES = [
   ["स्कॉलरशिप", "scholarship"], ["रूम", "room"], ["कमरा", "room"],
   ["टीचर", "teacher"], ["अध्यापक", "teacher"], ["शिक्षक", "teacher"],
   ["लिस्ट", "list"], ["उसका", "uska"], ["उनका", "unka"], ["इसका", "iska"],
-  ["उसकी", "uski"], ["इसकी", "iski"], ["सेमेस्टर", "semester"], ["पेपर", "paper"]
+  ["उसकी", "uski"], ["इसकी", "iski"], ["सेमेस्टर", "semester"], ["पेपर", "paper"],
+  ["गर्ल्स", "girls"], ["बॉयज़", "boys"], ["बॉयज", "boys"], ["एचओडी", "hod"],
+  ["सीएसई", "cse"], ["एमबीए", "mba"], ["केबिन", "cabin"], ["डेटा स्ट्रक्चर", "data structures"],
+  ["डेटा स्ट्रक्चर्स", "data structures"], ["छात्रवृत्ति", "scholarship"], ["उपस्थिति", "attendance"],
+  ["दस्तावेज़", "documents"], ["दस्तावेज", "documents"], ["छात्रावास", "hostel"]
 ]
   .map(([hindi, english]) => [normalize(hindi), english])
   .filter(([hindi]) => hindi.length >= 2)
@@ -1008,6 +1012,50 @@ function findRoom(p) {
   );
 }
 
+function feeLabel(type, lang) {
+  if (lang === "hi") {
+    const m = { tuition: "ट्यूशन शुल्क", hostel: "हॉस्टल शुल्क", exam: "परीक्षा शुल्क", transport: "ट्रांसपोर्ट शुल्क" };
+    return m[type] || type + " शुल्क";
+  }
+  return `${type} fee`;
+}
+
+function periodLabel(period, lang) {
+  if (lang === "hi") {
+    const m = { semester: "प्रति सेमेस्टर", year: "प्रति वर्ष" };
+    return m[period] || "प्रति " + period;
+  }
+  return `per ${period}`;
+}
+
+// Hindi answers: translate the English labels that come from the data records.
+// Names of people, subjects and buildings stay as they are.
+function localizeHi(text) {
+  const days = { Sun: "रवि", Mon: "सोम", Tue: "मंगल", Wed: "बुध", Thu: "गुरु", Fri: "शुक्र", Sat: "शनि" };
+  const months = { Jan: "जन॰", Feb: "फ़र॰", Mar: "मार्च", Apr: "अप्रैल", May: "मई", Jun: "जून", Jul: "जुल॰", Aug: "अग॰", Sep: "सित॰", Oct: "अक्टू॰", Nov: "नव॰", Dec: "दिस॰" };
+  const ord = { "1st": "पहली", "2nd": "दूसरी", "3rd": "तीसरी", "4th": "चौथी", "5th": "पाँचवीं" };
+  return String(text)
+    .replace(/(Sun|Mon|Tue|Wed|Thu|Fri|Sat),? (\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec),? (\d{4})/g,
+      (_, d, n, m, y) => `${days[d]}, ${n} ${months[m]} ${y}`)
+    .replace(/Ground Floor/g, "भूतल")
+    .replace(/(\d(?:st|nd|rd|th)) Floor/g, (_, o) => `${ord[o] || o} मंज़िल`)
+    .replace(/Mid-Semester/g, "मध्य-सेमेस्टर")
+    .replace(/End-Semester/g, "अंतिम सेमेस्टर")
+    .replace(/Semester (\d+)/g, "सेमेस्टर $1")
+    .replace(/Assistant Professor/g, "सहायक प्रोफेसर")
+    .replace(/Associate Professor/g, "एसोसिएट प्रोफेसर")
+    .replace(/• Professor/g, "• प्रोफेसर")
+    .replace(/• HOD/g, "• विभागाध्यक्ष")
+    .replace(/Engineering Mathematics/g, "इंजीनियरिंग गणित")
+    .replace(/Mathematics/g, "गणित")
+    .replace(/Demo (गणित|English) Faculty/g, "डेमो $1 फैकल्टी")
+    .replace(/Girls Hostel/g, "गर्ल्स हॉस्टल")
+    .replace(/Boys Hostel/g, "बॉयज़ हॉस्टल")
+    .replace(/\(Girls\)/g, "(लड़कियाँ)")
+    .replace(/\(Boys\)/g, "(लड़के)")
+    .replace(/Central Library/g, "सेंट्रल लाइब्रेरी");
+}
+
 function findFee(p) {
   const fees = (knowledgeBase.fees || []).filter(f =>
     (!p.course || f.course === p.course) &&
@@ -1021,8 +1069,8 @@ function findFee(p) {
 
   return demoAnswer(
     fees.map(f =>
-      `💳 ${f.course} ${f.branch} — ${f.feeType} fee\n` +
-      `₹${Number(f.amount).toLocaleString("en-IN")} per ${f.period} (${f.academicYear})`
+      `💳 ${f.course === f.branch ? f.course : f.course + " " + f.branch} — ${feeLabel(f.feeType, p.lang)}\n` +
+      `₹${Number(f.amount).toLocaleString("en-IN")} ${periodLabel(f.period, p.lang)} (${f.academicYear})`
     ).join("\n\n"),
     p.lang
   );
@@ -1496,7 +1544,7 @@ app.post("/api/chat", async (req, res) => {
         };
 
     res.json({
-      answer,
+      answer: p.lang === "hi" ? localizeHi(answer) : answer,
       intent: p.intent,
       demoData: true,
       context,

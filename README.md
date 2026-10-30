@@ -9,7 +9,7 @@ Devagya is a web chatbot that answers routine campus questions in English, Hindi
 > **All university data in this project is fictional demo data.** Answers are labelled
 > "Demo data — official university information nahi hai".
 
-**Live demo:** `<https://devagya-encnortvr-neeraj-8aa3.vercel.app/>`  ·  **Repository:** `<https://github.com/radhe-8075/devagya>`
+**Live demo:** `<paste your Vercel link here>`  ·  **Repository:** `<paste your GitHub link here>`
 
 ---
 
@@ -62,12 +62,12 @@ Deployed on Vercel from the `main` branch; static files are served from `public/
 
 ## 3. Tests
 
-`npm test` starts the real server and checks **46 cases**: chat scenarios in English, Hindi and Hinglish
+`npm test` starts the real server and checks **49 cases**: chat scenarios in English, Hindi and Hinglish
 (including follow-up conversations and typo cases), that every suggestion button in all three languages
 leads to a real answer, empty and very long input, the health endpoint, that private files
 (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Latest run: **46 passed, 0 failed.**
+Latest run: **49 passed, 0 failed.**
 
 ### Sample inputs and outputs
 
