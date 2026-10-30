@@ -5,6 +5,7 @@
  */
 process.env.OPENAI_API_KEY = "";   // tests must not depend on any external AI
 process.env.N8N_WEBHOOK_URL = "";
+process.env.GEMINI_API_KEY = "";
 process.env.REQUESTS_FILE = require("path").join(require("os").tmpdir(), "devagya-test-requests-" + process.pid + ".json");
 process.env.ADMIN_KEY = "test-admin-key";
 try { require("fs").unlinkSync(process.env.REQUESTS_FILE); } catch (e) {}
@@ -276,6 +277,44 @@ async function call(base, question, context, workflow) {
   const after = await newChat().say("BON status " + requestId);
   report("Workflow: student now sees the updated status (Under Review)",
     after.answer.includes("Under Review"), after.answer);
+
+  // ---- LLM helper (mock LLM: no real internet call is made) ----
+  const realFetch = global.fetch;
+  let llmCalls = [];
+  let llmMode = "ok";
+  global.fetch = async (url, options) => {
+    if (String(url).includes("generativelanguage.googleapis.com")) {
+      llmCalls.push(JSON.parse(options.body));
+      if (llmMode === "fail") return { ok: false, status: 500, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: "MOCK-LLM-ANSWER" }] } }] }) };
+    }
+    return realFetch(url, options);
+  };
+  process.env.GEMINI_API_KEY = "test-gemini-key-0123456789abcdef";
+
+  const llmUnknown = await call(base, "random gibberish xyz", null);
+  report("LLM: unknown question is answered by the LLM",
+    String(llmUnknown.body.answer).includes("MOCK-LLM-ANSWER") && llmCalls.length > 0, JSON.stringify(llmUnknown.body.answer));
+  report("LLM: knowledge base is sent as the only source",
+    llmCalls[0] && JSON.stringify(llmCalls[0].systemInstruction).includes("Dr. Neha Verma") &&
+    JSON.stringify(llmCalls[0].systemInstruction).includes("Answer ONLY"), "system prompt missing");
+
+  llmCalls = [];
+  const llmKnown = await call(base, "Who is the CSE HOD?", null);
+  report("LLM: questions the rules understand do NOT use the LLM",
+    llmCalls.length === 0 && String(llmKnown.body.answer).includes("Room 3001"), "llm calls: " + llmCalls.length);
+
+  llmCalls = [];
+  const llmPersonal = await call(base, "mera roll number 2215001234 hai random gibberish", null);
+  report("LLM: text with a roll number / long id is never sent to the LLM", llmCalls.length === 0, "llm calls: " + llmCalls.length);
+
+  llmMode = "fail";
+  const llmDown = await call(base, "random gibberish xyz", null);
+  report("LLM: if the LLM fails, the old safe fallback is used",
+    llmDown.status === 200 && llmDown.body.intent === "unknown" && String(llmDown.body.answer).includes("couldn't fully understand"), JSON.stringify(llmDown.body.answer));
+
+  global.fetch = realFetch;
+  process.env.GEMINI_API_KEY = "";
 
   const empty = await call(base, "", null);
   report("Empty question is rejected (400)", empty.status === 400, "status " + empty.status);

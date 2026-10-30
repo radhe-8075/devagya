@@ -7,6 +7,7 @@ const fs = require("fs");
 const OpenAI = require("openai");
 const knowledgeBase = require("./knowledge-base");
 const workflow = require("./workflow");
+const { askLLM, llmEnabled } = require("./llm");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1466,6 +1467,7 @@ app.get("/api/health", (req, res) => {
     status: "ok",
     demoData: true,
     aiEnabled: Boolean(ai),
+    llmEnabled: llmEnabled(),
     n8nEnabled: Boolean(process.env.N8N_WEBHOOK_URL),
     message: "Devagya demo assistant is running."
   });
@@ -1566,8 +1568,9 @@ app.post("/api/chat", async (req, res) => {
         answer = tr(p.lang, "unrelated");
         break;
       default: {
-        // Local matching did not understand: optionally ask the n8n AI helper.
-        const aiAnswer = await askN8n(question);
+        // Local matching did not understand: ask the LLM (answers only from the
+        // knowledge base), then the optional n8n helper, then the safe fallback.
+        const aiAnswer = (await askLLM(question, p.lang)) || (await askN8n(question));
 
         answer = aiAnswer
           ? demoAnswer("🤖 " + aiAnswer, p.lang)

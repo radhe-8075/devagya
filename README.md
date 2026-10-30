@@ -43,6 +43,7 @@ Express server (server.js)  ── GET /api/health, POST /api/admin/status (staf
 | Staff status change (CLI `node set-status.js` or key-protected `POST /api/admin/status`) | Implemented |
 | Safe fallback for topics without verified records (exact timetable, results, marks, admit card, syllabus) | Implemented |
 | Optional AI question classifier (OpenAI) | Code present, **disabled in the demo** (no API key set) |
+| **LLM answers for unknown questions** (Gemini or OpenAI, `llm.js`): answers only from `knowledge-base.js`, never receives form/personal data, falls back to the rule-based reply if the LLM fails. Needs `GEMINI_API_KEY` (or `OPENAI_API_KEY`) | Implemented, **active only when a key is set** |
 | Optional n8n AI helper for unknown questions | Code present, **disabled in the demo** (no webhook set) |
 | Events, certificates and documents records | **Not populated yet** — bot says records are unavailable |
 
@@ -61,6 +62,7 @@ Optional environment variables (copy `.env.example` to `.env`; never commit `.en
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Optional AI question classifier. Leave empty to run fully rule-based. |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | LLM for questions the rules cannot understand (Gemini tried first, then OpenAI). |
 | `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET` | Optional n8n workflow used only when local matching cannot understand a question. |
 | `PORT` | Local port (default 3000). |
 | `REQUESTS_FILE` | Where service requests are saved (default `data/requests.json`). |
@@ -70,12 +72,12 @@ Deployed on Vercel from the `main` branch; static files are served from `public/
 
 ## 3. Tests
 
-`npm test` starts the real server and checks **75 cases**: chat scenarios in English, Hindi and Hinglish
+`npm test` starts the real server and checks **80 cases**: chat scenarios in English, Hindi and Hinglish
 (including follow-up conversations and typo cases), that every suggestion button in all three languages
 leads to a real answer, empty and very long input, the health endpoint, that private files
 (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Latest run: **75 passed, 0 failed.** The service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, a tampered workflow state, the safe fallback and the staff status endpoint.
+Latest run: **80 passed, 0 failed.** The service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, a tampered workflow state, the safe fallback and the staff status endpoint.
 
 ### Sample inputs and outputs
 
