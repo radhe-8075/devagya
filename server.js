@@ -6,6 +6,7 @@ const path = require("path");
 const fs = require("fs");
 const OpenAI = require("openai");
 const knowledgeBase = require("./knowledge-base");
+const workflow = require("./workflow");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1337,6 +1338,12 @@ const SUGGESTIONS = {
   }
 };
 
+const CERT_APPLY_CHIPS = {
+  en: ["I want to apply for a bonafide certificate", "Where is the Student Services Desk?"],
+  hinglish: ["Mujhe bonafide certificate apply karna hai", "Student Services Desk kahan hai?"],
+  hi: ["मुझे बोनाफाइड सर्टिफिकेट अप्लाई करना है", "Student Services Desk कहाँ है?"]
+};
+
 function suggestionsFor(intent, facultyIds = [], lang = "hinglish") {
   const set = SUGGESTIONS[lang] || SUGGESTIONS.hinglish;
 
@@ -1354,6 +1361,8 @@ function suggestionsFor(intent, facultyIds = [], lang = "hinglish") {
       return set.campus;
     case "paper":
       return set.paper;
+    case "certificate":
+      return CERT_APPLY_CHIPS[lang] || CERT_APPLY_CHIPS.en;
     default:
       return set.other;
   }
@@ -1380,7 +1389,13 @@ function findEvents(lang) {
   );
 }
 
-function findCertificateOrDocument(p, kind) {
+const CERT_LABELS = {
+  en: { purpose: "Purpose", where: "Where to apply", docs: "Documents", time: "Time needed", none: "Not specified" },
+  hinglish: { purpose: "Purpose", where: "Kahan apply karein", docs: "Documents", time: "Time lagega", none: "Specified nahi" },
+  hi: { purpose: "उद्देश्य", where: "कहाँ आवेदन करें", docs: "दस्तावेज़", time: "समय", none: "उपलब्ध नहीं" }
+};
+
+function findCertificateOrDocument(p, kind, rawQuestion = "") {
   const records = kind === "certificate"
     ? (knowledgeBase.certificates || [])
     : (knowledgeBase.documents || []);
@@ -1389,26 +1404,39 @@ function findCertificateOrDocument(p, kind) {
     return tr(p.lang, "noCertDoc", kind);
   }
 
-  const matches = records.filter(r => {
-    const haystack = normalize(
-      `${r.name || ""} ${r.type || ""} ${r.purpose || ""} ${r.id || ""}`
-    );
+  // Hindi spellings of the certificate names, so Hindi questions match the records too.
+  // (p.q has Devanagari vowel signs stripped, so this checks the original question text.)
+  let q = p.q;
+  if (/बोनाफ/.test(rawQuestion)) q += " bonafide";
+  if (/चरित्र|कैरेक्टर/.test(rawQuestion)) q += " character";
 
-    return haystack.split(" ").some(
-      word => word.length > 3 && p.q.includes(word)
-    );
-  });
+  const words = r => normalize(
+    `${r.name || ""} ${r.type || ""} ${r.purpose || ""} ${r.id || ""}`
+  ).split(" ").filter((word, i, all) => word.length > 3 && q.includes(word) && all.indexOf(word) === i);
 
-  if (!matches.length) {
+  const matches = records.filter(r => words(r).length > 0);
+
+  // If some records match more words (e.g. "bonafide certificate"), keep only the best ones.
+  const best = matches.length ? Math.max(...matches.map(r => words(r).length)) : 0;
+  const top = matches.filter(r => words(r).length === best);
+
+  if (!top.length) {
     return tr(p.lang, "whichCertDoc", kind);
   }
 
+  const L = CERT_LABELS[p.lang] || CERT_LABELS.en;
+  const pick = (r, key) => {
+    const suffix = p.lang === "hi" ? "Hi" : p.lang === "hinglish" ? "Hinglish" : "";
+    return (suffix && r[key + suffix]) || r[key];
+  };
+
   return demoAnswer(
-    matches.map(r =>
+    top.map(r =>
       `${r.name || r.type}\n` +
-      `Purpose: ${r.purpose || "Not specified"}\n` +
-      `Where to apply: ${r.applyAt || r.office || r.location || "Not specified"}\n` +
-      `Documents: ${(r.sampleDocuments || r.requiredDocuments || r.documents || []).join(", ") || "Not specified"}`
+      `${L.purpose}: ${pick(r, "purpose") || L.none}\n` +
+      `${L.where}: ${r.applyAt || r.office || r.location || L.none}\n` +
+      `${L.docs}: ${(pick(r, "sampleDocuments") || r.requiredDocuments || r.documents || []).join(", ") || L.none}` +
+      (r.processingTime ? `\n${L.time}: ${pick(r, "processingTime")}` : "")
     ).join("\n\n"),
     p.lang
   );
@@ -1443,6 +1471,20 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Staff-only: change a request status. Disabled unless ADMIN_KEY is set.
+app.post("/api/admin/status", (req, res) => {
+  const key = process.env.ADMIN_KEY || "";
+  const given = String(req.get("x-admin-key") || "");
+  const sha = v => require("crypto").createHash("sha256").update(v).digest();
+
+  if (!key || !require("crypto").timingSafeEqual(sha(key), sha(given))) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
+  const result = workflow.setStatus(req.body?.id, req.body?.status);
+  res.status(result.ok ? 200 : 400).json(result);
+});
+
 app.post("/api/chat", async (req, res) => {
   let lang = "en";
 
@@ -1454,6 +1496,13 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({
         answer: tr(ctx?.lang || "en", "typeQuestion")
       });
+    }
+
+    // Service-request workflow (apply / track / unverified topics) runs first.
+    const wf = workflow.handle(question, req.body?.workflow);
+
+    if (wf) {
+      return res.json(wf);
     }
 
     const p = await understandQuestion(question, ctx);
@@ -1505,7 +1554,7 @@ app.post("/api/chat", async (req, res) => {
         answer = findEvents(p.lang);
         break;
       case "certificate":
-        answer = findCertificateOrDocument(p, "certificate");
+        answer = findCertificateOrDocument(p, "certificate", question);
         break;
       case "document":
         answer = findCertificateOrDocument(p, "document");

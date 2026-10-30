@@ -19,8 +19,9 @@ Devagya is a web chatbot that answers routine campus questions in English, Hindi
 Browser (public/: HTML, CSS, JavaScript)
    │  POST /api/chat  { question, context }
    ▼
-Express server (server.js)  ── GET /api/health
+Express server (server.js)  ── GET /api/health, POST /api/admin/status (staff, key protected)
    │
+   ├─ 0. Service-request workflow (workflow.js): apply -> guided form -> Request ID -> tracking
    ├─ 1. Normalise text + fix common typos (edit-distance matching)
    ├─ 2. Detect intent and entities (rules for English / Hindi / Hinglish)
    ├─ 3. Apply conversation context (follow-up questions)
@@ -36,6 +37,11 @@ Express server (server.js)  ── GET /api/health
 | Typo tolerance (e.g. "facluty", "hostle") | Implemented |
 | Follow-up memory (e.g. "uska room kaunsa hai?", "aur MBA ki?") | Implemented |
 | Honest fallback for unknown questions and missing records | Implemented |
+| Certificate information (bonafide, character) from the demo knowledge base | Implemented |
+| **Guided service request**: "I want to apply for a bonafide certificate" asks name, roll number and certificate type one by one, saves the request and returns a Request ID (BON-1001, CHR-1001) | Implemented (English / Hinglish / Hindi) |
+| **Request tracking**: "What is the status of my request BON-1001?" | Implemented |
+| Staff status change (CLI `node set-status.js` or key-protected `POST /api/admin/status`) | Implemented |
+| Safe fallback for topics without verified records (exact timetable, results, marks, admit card, syllabus) | Implemented |
 | Optional AI question classifier (OpenAI) | Code present, **disabled in the demo** (no API key set) |
 | Optional n8n AI helper for unknown questions | Code present, **disabled in the demo** (no webhook set) |
 | Events, certificates and documents records | **Not populated yet** — bot says records are unavailable |
@@ -57,17 +63,19 @@ Optional environment variables (copy `.env.example` to `.env`; never commit `.en
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Optional AI question classifier. Leave empty to run fully rule-based. |
 | `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET` | Optional n8n workflow used only when local matching cannot understand a question. |
 | `PORT` | Local port (default 3000). |
+| `REQUESTS_FILE` | Where service requests are saved (default `data/requests.json`). |
+| `ADMIN_KEY` | Secret for `POST /api/admin/status`. If empty, that endpoint is disabled. |
 
 Deployed on Vercel from the `main` branch; static files are served from `public/`.
 
 ## 3. Tests
 
-`npm test` starts the real server and checks **49 cases**: chat scenarios in English, Hindi and Hinglish
+`npm test` starts the real server and checks **75 cases**: chat scenarios in English, Hindi and Hinglish
 (including follow-up conversations and typo cases), that every suggestion button in all three languages
 leads to a real answer, empty and very long input, the health endpoint, that private files
 (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Latest run: **49 passed, 0 failed.**
+Latest run: **75 passed, 0 failed.** The service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, a tampered workflow state, the safe fallback and the staff status endpoint.
 
 ### Sample inputs and outputs
 
@@ -90,6 +98,9 @@ Latest run: **49 passed, 0 failed.**
 - Some records are marked "to be confirmed" (English/Maths faculty cabins, hostel and café locations); the bot says so instead of guessing.
 - The demo has three faculty records with the same name (different departments), so a name-only query returns all matches.
 - Events, certificates and documents have no records yet.
+- Service requests are saved in a local JSON file (`data/requests.json`). This is fine for a local demo. On Vercel the disk is temporary, so a real database is needed for permanent storage.
+- Requests are **not sent to any real university office**; there is no student login, so anyone who knows a Request ID can see its status (the name is masked, the roll number is never shown). A real deployment needs login, role-based access and an encrypted database.
+- Only two certificate types are supported in the request flow (Bonafide, Character). Status changes are made by staff through the CLI or the key-protected endpoint.
 - Follow-up memory keeps only the last topic and is stored in the browser, not on the server.
 - Faculty "Cabin Finder" search on the page reuses the chat backend.
 
@@ -111,5 +122,7 @@ Latest run: **49 passed, 0 failed.**
 ## 6. Demo setup instructions
 
 - Open the live link, click **Ask Devagya**, and try: `tum kon ho`, `English teacher`, `Exam fees kitni hai?`, `Girls hostel list`, then a follow-up such as `uska room kaunsa hai?`.
-- No login or credentials are needed. Only demo data is used and no personal data is stored.
+- No login or credentials are needed. Use only dummy names and roll numbers: the request demo saves them in `data/requests.json` on the machine running the server.
+- Request demo: `I need information about a bonafide certificate` → `I want to apply for a bonafide certificate` → name → roll number → `Bonafide Certificate` → note the Request ID → `What is the status of my request BON-1001?`. To show a status change, run `node set-status.js BON-1001 "Under Review"` and ask again.
+- Safe fallback demo: `What is the exact timetable for next semester?`
 - Backup: run locally with `npm install && npm start` and open `http://localhost:3000`. Keep a short screen recording of the demo as a clearly labelled backup.

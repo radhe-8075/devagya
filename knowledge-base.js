@@ -337,6 +337,38 @@ const knowledgeBase = {
     }
   ],
 
+  // Certificate information (fictional demo records)
+  certificates: [
+    {
+      id: "C001",
+      name: "Bonafide Certificate",
+      purpose: "Proof that you are a current student. Used for bank, scholarship, passport, visa or internship forms.",
+      purposeHinglish: "Ye proof hai ki aap abhi university ke student ho. Bank, scholarship, passport, visa ya internship form mein kaam aata hai.",
+      purposeHi: "यह प्रमाण है कि आप अभी विश्वविद्यालय के छात्र हैं। बैंक, स्कॉलरशिप, पासपोर्ट, वीज़ा या इंटर्नशिप फॉर्म में काम आता है।",
+      applyAt: "Student Services Desk, Administrative Block D, Room 120",
+      sampleDocuments: ["College ID card", "Fee receipt of the current semester"],
+      sampleDocumentsHinglish: ["College ID card", "Current semester ki fee receipt"],
+      sampleDocumentsHi: ["कॉलेज आईडी कार्ड", "मौजूदा सेमेस्टर की फीस रसीद"],
+      processingTime: "About 2 working days (demo value)",
+      processingTimeHinglish: "Lagbhag 2 working days (demo value)",
+      processingTimeHi: "लगभग 2 कार्य दिवस (डेमो मान)"
+    },
+    {
+      id: "C002",
+      name: "Character Certificate",
+      purpose: "Certificate of conduct. Used for jobs, higher studies or scholarships.",
+      purposeHinglish: "Conduct ka certificate. Job, higher studies ya scholarship mein kaam aata hai.",
+      purposeHi: "आचरण का प्रमाणपत्र। नौकरी, उच्च शिक्षा या स्कॉलरशिप में काम आता है।",
+      applyAt: "Student Services Desk, Administrative Block D, Room 120",
+      sampleDocuments: ["College ID card", "No-dues slip"],
+      sampleDocumentsHinglish: ["College ID card", "No-dues slip"],
+      sampleDocumentsHi: ["कॉलेज आईडी कार्ड", "नो-ड्यूज़ स्लिप"],
+      processingTime: "About 3 working days (demo value)",
+      processingTimeHinglish: "Lagbhag 3 working days (demo value)",
+      processingTimeHi: "लगभग 3 कार्य दिवस (डेमो मान)"
+    }
+  ],
+
   // Hostel directory — fictional demo records
   hostels: [
     {

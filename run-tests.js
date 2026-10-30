@@ -5,6 +5,9 @@
  */
 process.env.OPENAI_API_KEY = "";   // tests must not depend on any external AI
 process.env.N8N_WEBHOOK_URL = "";
+process.env.REQUESTS_FILE = require("path").join(require("os").tmpdir(), "devagya-test-requests-" + process.pid + ".json");
+process.env.ADMIN_KEY = "test-admin-key";
+try { require("fs").unlinkSync(process.env.REQUESTS_FILE); } catch (e) {}
 
 const app = require("./server");
 
@@ -52,11 +55,11 @@ const tests = [
   ["Follow-up: paper after exam",   ["B.Tech CSE exam dates batao", "Data Structures ka 2025 paper do"], "paper", "2025"]
 ];
 
-async function call(base, question, context) {
+async function call(base, question, context, workflow) {
   const response = await fetch(base + "/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, context })
+    body: JSON.stringify({ question, context, workflow })
   });
 
   return { status: response.status, body: await response.json() };
@@ -116,6 +119,163 @@ async function call(base, question, context) {
 
     report(`All ${chipCount} suggestion chips work (${lang})`, badChips.length === 0, badChips.join("; "));
   }
+
+
+  // ---- service-request workflow: apply -> Request ID -> tracking ----
+  // A tiny "browser": remembers workflow state between messages like script.js does.
+  function newChat() {
+    const chat = { wf: null, ctx: null };
+    chat.say = async question => {
+      const r = await call(base, question, chat.ctx, chat.wf);
+      chat.ctx = r.body.context || chat.ctx;
+      chat.wf = r.body.workflow || null;
+      return r.body;
+    };
+    return chat;
+  }
+
+  async function runApply(messages) {
+    const chat = newChat();
+    let last;
+    for (const m of messages) last = await chat.say(m);
+    return { chat, last };
+  }
+
+  const info = await newChat().say("I need information about a bonafide certificate");
+  report("Workflow: asking for bonafide INFO does not start the form",
+    info.intent === "certificate" && !info.workflow && info.answer.includes("Student Services Desk") && !info.answer.includes("Character Certificate"),
+    "intent=" + info.intent);
+
+  const infoHi = await newChat().say("बोनाफाइड सर्टिफिकेट की जानकारी चाहिए");
+  report("Workflow: Hindi bonafide INFO question gets the record in Hindi",
+    infoHi.intent === "certificate" && infoHi.answer.includes("उद्देश्य") && !infoHi.answer.includes("Character"),
+    infoHi.answer);
+  const infoHing = await newChat().say("bonafide certificate ki jaankari chahiye");
+  report("Workflow: Hinglish bonafide INFO question gets the record in Hinglish",
+    infoHing.intent === "certificate" && infoHing.answer.includes("Kahan apply karein"), infoHing.answer);
+
+  const direct = await newChat().say("I need a bonafide certificate");
+  report("Workflow: 'I need a bonafide certificate' starts the form",
+    direct.intent === "workflow", "intent=" + direct.intent);
+
+  const how = await newChat().say("How do I apply for a bonafide certificate?");
+  report("Workflow: 'how do I apply' is information, not the form",
+    how.intent === "certificate" && !how.workflow, "intent=" + how.intent);
+
+  const start = await newChat().say("I want to apply for a bonafide certificate");
+  report("Workflow: apply request starts the guided form (asks name)",
+    start.intent === "workflow" && start.workflow && start.workflow.step === "name" && /name/i.test(start.answer),
+    JSON.stringify(start.workflow));
+
+  const full = await runApply([
+    "I want to apply for a bonafide certificate", "Test Student", "TEST-1234", "Bonafide Certificate"
+  ]);
+  const idMatch = String(full.last.answer).match(/BON-\d{4}/);
+  report("Workflow: full apply flow creates a request with ID BON-xxxx",
+    full.last.intent === "request_created" && idMatch && full.last.workflow === null,
+    full.last.answer);
+
+  const requestId = idMatch ? idMatch[0] : "BON-0000";
+
+  const tracked = await newChat().say("What is the status of my request " + requestId + "?");
+  report("Workflow: status of the new request is returned (Submitted)",
+    tracked.intent === "request_status" && tracked.answer.includes(requestId) && tracked.answer.includes("Submitted"),
+    tracked.answer);
+  report("Workflow: status reply hides the full student name and roll number",
+    !tracked.answer.includes("Test Student") && !tracked.answer.includes("TEST-1234") && tracked.answer.includes("T***"),
+    tracked.answer);
+
+  const missing = await newChat().say("status of BON-9999");
+  report("Workflow: unknown Request ID gets an honest 'not found'",
+    missing.intent === "request_status" && /could not find/i.test(missing.answer), missing.answer);
+
+  const noId = await newChat().say("track my request");
+  const withId = noId.workflow ? await (async () => { const c = newChat(); c.wf = noId.workflow; return c.say(requestId); })() : {};
+  report("Workflow: 'track my request' asks for the ID, then answers",
+    noId.workflow && noId.workflow.step === "track_id" && withId.intent === "request_status" && String(withId.answer).includes(requestId),
+    JSON.stringify(noId.workflow));
+
+  const second = await runApply([
+    "Mujhe character certificate apply karna hai", "Demo Student", "TEST-5678", "Character Certificate"
+  ]);
+  const secondId = (String(second.last.answer).match(/CHR-\d{4}/) || [""])[0];
+  report("Workflow: Hinglish apply works end to end (CHR-xxxx, Hinglish text)",
+    secondId && second.last.lang === "hinglish" && second.last.answer.includes("Request ID"), second.last.answer);
+
+  const third = await runApply([
+    "I want to apply for a bonafide certificate", "Another Student", "TEST-9999", "bonafide"
+  ]);
+  const thirdId = (String(third.last.answer).match(/BON-\d{4}/) || [""])[0];
+  report("Workflow: every request gets a different, increasing ID",
+    thirdId && thirdId !== requestId && Number(thirdId.slice(4)) > Number(requestId.slice(4)),
+    requestId + " then " + thirdId);
+
+  const hindi = await runApply(["मुझे बोनाफाइड सर्टिफिकेट अप्लाई करना है", "टेस्ट छात्र", "TEST-4321", "बोनाफाइड"]);
+  report("Workflow: Hindi apply works end to end",
+    hindi.last.intent === "request_created" && hindi.last.lang === "hi" && hindi.last.answer.includes("रिक्वेस्ट ID"),
+    hindi.last.answer);
+
+  const chatBad = newChat();
+  await chatBad.say("I want to apply for a bonafide certificate");
+  const badName = await chatBad.say("12345 !!!");
+  report("Workflow: invalid name is rejected and the same question is asked again",
+    badName.workflow && badName.workflow.step === "name" && /letters/i.test(badName.answer), badName.answer);
+  await chatBad.say("Valid Name");
+  const badRoll = await chatBad.say("a");
+  report("Workflow: invalid roll number is rejected",
+    badRoll.workflow && badRoll.workflow.step === "roll" && /roll number/i.test(badRoll.answer), badRoll.answer);
+  await chatBad.say("TEST-1111");
+  const badCert = await chatBad.say("pizza");
+  report("Workflow: unknown certificate type is rejected, nothing is created",
+    badCert.workflow && badCert.workflow.step === "cert" && badCert.intent === "workflow", badCert.answer);
+
+  const chatCancel = newChat();
+  await chatCancel.say("I want to apply for a bonafide certificate");
+  await chatCancel.say("Test Student");
+  const cancelled = await chatCancel.say("cancel");
+  report("Workflow: 'cancel' stops the form and clears the state",
+    cancelled.intent === "workflow_cancelled" && cancelled.workflow === null, cancelled.intent);
+
+  const tampered = await call(base, "hello", null, { type: "cert", step: "hacker", data: { name: {}, roll: [] } });
+  report("Workflow: a tampered state from the browser is ignored (no crash)",
+    tampered.status === 200, "status " + tampered.status);
+
+  const timetable = await newChat().say("What is the exact timetable for next semester?");
+  report("Fallback: unverified topic gets the safe 'could not verify' answer",
+    timetable.intent === "unverified" && timetable.answer.includes("could not verify") && timetable.answer.includes("examination office"),
+    timetable.answer);
+  const resultQ = await newChat().say("what is my result");
+  report("Fallback: topics with no records (results) are not guessed",
+    resultQ.intent === "unverified", resultQ.intent);
+
+  // ---- staff status change ----
+  const noKey = await fetch(base + "/api/admin/status", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: requestId, status: "Under Review" })
+  });
+  report("Admin: changing a status without the key is refused (403)", noKey.status === 403, "status " + noKey.status);
+
+  const wrongKey = await fetch(base + "/api/admin/status", {
+    method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": "wrong" },
+    body: JSON.stringify({ id: requestId, status: "Under Review" })
+  });
+  report("Admin: wrong key is refused (403)", wrongKey.status === 403, "status " + wrongKey.status);
+
+  const okKey = await fetch(base + "/api/admin/status", {
+    method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": "test-admin-key" },
+    body: JSON.stringify({ id: requestId, status: "Under Review" })
+  });
+  report("Admin: correct key changes the status", okKey.status === 200, "status " + okKey.status);
+
+  const badStatus = await fetch(base + "/api/admin/status", {
+    method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": "test-admin-key" },
+    body: JSON.stringify({ id: requestId, status: "Banana" })
+  });
+  report("Admin: invalid status value is refused (400)", badStatus.status === 400, "status " + badStatus.status);
+
+  const after = await newChat().say("BON status " + requestId);
+  report("Workflow: student now sees the updated status (Under Review)",
+    after.answer.includes("Under Review"), after.answer);
 
   const empty = await call(base, "", null);
   report("Empty question is rejected (400)", empty.status === 400, "status " + empty.status);
