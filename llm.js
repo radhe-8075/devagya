@@ -68,7 +68,7 @@ async function askGemini(question, lang) {
   const key = (process.env.GEMINI_API_KEY || "").trim();
   if (!isRealKey(key)) return null;
 
-  const models = (process.env.GEMINI_MODEL || "gemini-2.5-flash,gemini-2.0-flash")
+  const models = (process.env.GEMINI_MODEL || "gemini-3.8-flash,gemini-2.5-flash")
     .split(",").map(m => m.trim()).filter(Boolean);
 
   for (const model of models) {
@@ -81,14 +81,20 @@ async function askGemini(question, lang) {
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemPrompt(lang) }] },
             contents: [{ role: "user", parts: [{ text: question }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 500 }
+            generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
           })
         }
       );
-      if (!res.ok) { console.error(`Gemini ${model} HTTP ${res.status}`); continue; }
+      if (!res.ok) {
+        let detail = "";
+        try { detail = String(await res.text()).slice(0, 300); } catch (e) {}
+        console.error(`Gemini ${model} HTTP ${res.status} ${detail}`);
+        continue;
+      }
       const data = await res.json();
       const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
       if (text) return text;
+      console.error(`Gemini ${model}: empty answer, finishReason=${data?.candidates?.[0]?.finishReason || "none"}, blocked=${data?.promptFeedback?.blockReason || "no"}`);
     } catch (e) {
       console.error(`Gemini ${model} failed:`, e.message);
     }
