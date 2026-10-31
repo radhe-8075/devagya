@@ -72,14 +72,14 @@ Deployed on Vercel from the `main` branch; static files are served from `public/
 
 ## 3. Tests
 
-`npm test` starts the real server and checks **95 cases**: chat scenarios in English, Hindi and Hinglish
+`npm test` starts the real server and checks **97 cases**: chat scenarios in English, Hindi and Hinglish
 (including follow-up conversations and typo cases), that every suggestion button in all three languages
 leads to a real answer, empty and very long input, the health endpoint, that private files
 (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Latest run: **95 passed, 0 failed.** The service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, a tampered workflow state, the safe fallback and the staff status endpoint.
+Latest run: **97 passed, 0 failed.** The service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, a tampered workflow state, the safe fallback and the staff status endpoint.
 
-**Stress test:** `node stress-test.js` generates about 1,100 questions (`STRESS_MULT=20 node stress-test.js` generates about 11,100: English, Hinglish and Hindi, polite prefixes and suffixes such as "sir", typos, missing branches, subjects and rooms, other languages, out-of-scope and unsafe inputs) and checks every answer against `knowledge-base.js`. Latest run: **11,134 of 11,134 passed**. It runs rule-based only, with no LLM and no internet.
+**Stress test:** `node stress-test.js` generates 1,1xx questions (`STRESS_MULT=20 node stress-test.js` generates about 11,100: English, Hinglish and Hindi, polite prefixes and suffixes such as "sir", typos, missing branches, subjects and rooms, other languages, out-of-scope and unsafe inputs) and checks every answer against `knowledge-base.js`. Latest run: **11,134 of 11,134 passed**. It runs rule-based only, with no LLM and no internet.
 
 ### Sample inputs and outputs
 

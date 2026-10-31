@@ -193,13 +193,15 @@ function extractDetails(question) {
   // Branches the university has no records for: remember the name so the bot can say so
   // instead of silently answering for another branch.
   let unknownBranch = "";
-  if (!branch) {
+  {
     const ub = q.match(/\b(aiml|ai ml|ai|artificial intelligence|data science|civil|electrical|eee|information technology|chemical|biotech|biotechnology|robotics|cyber security|cybersecurity)\b/);
     const itMatch = !ub && (q.match(/\b(?:btech|b tech|b\.tech)\s+(it)\b/) || q.match(/\b(it)\s+(?:branch|department|dept)\b/));
     if (ub || itMatch) {
       const hit = ub ? ub[1] : "it";
       const map = { aiml: "AIML", "ai ml": "AIML", ai: "AI", "artificial intelligence": "AI", "data science": "Data Science", civil: "Civil", electrical: "Electrical", eee: "EEE", it: "IT", "information technology": "IT", chemical: "Chemical", biotech: "Biotech", biotechnology: "Biotech", robotics: "Robotics", "cyber security": "Cyber Security", cybersecurity: "Cyber Security" };
-      unknownBranch = map[hit] || hit.toUpperCase();
+      const name = map[hit] || hit.toUpperCase();
+      // "CSE AI" / "CSE data science" is a specialisation with no record of its own.
+      unknownBranch = branch && branch !== "MBA" ? `${branch} ${name}` : name;
     }
   }
 
@@ -852,14 +854,14 @@ const MSG = {
     hinglish: "Is fee type ka demo record nahi mila. Course, branch aur fee type batao (jaise: B.Tech CSE hostel fee). Missing fee ka amount guess nahi kiya jayega."
   },
   feeNoBranch: {
-    en: (label, list) => `No fee record found for ${label}. Fee records exist only for: ${list}. I won't guess an amount for another branch.`,
-    hi: (label, list) => `${label} का फीस रिकॉर्ड नहीं मिला। फीस रिकॉर्ड सिर्फ इन के लिए हैं: ${list}। मैं दूसरी ब्रांच की राशि का अंदाज़ा नहीं लगाऊँगा।`,
-    hinglish: (label, list) => `${label} ka fee record nahi mila. Fee record sirf in ke liye hai: ${list}. Dusri branch ka amount guess nahi karunga.`
+    en: (label, list) => `Sorry, no fee record found for ${label}. Fee records exist only for: ${list}. I won't guess an amount for another branch.`,
+    hi: (label, list) => `क्षमा करें, ${label} का फीस रिकॉर्ड नहीं मिला। फीस रिकॉर्ड सिर्फ इन के लिए हैं: ${list}। मैं दूसरी ब्रांच की राशि का अंदाज़ा नहीं लगाऊँगा।`,
+    hinglish: (label, list) => `Sorry, ${label} ka fee record nahi mila. Fee record sirf in ke liye hai: ${list}. Dusri branch ka amount guess nahi karunga.`
   },
   branchNoRecord: {
-    en: label => `No demo record found for ${label}. Records exist only for CSE, ECE and MBA, so I won't guess.`,
-    hi: label => `${label} का डेमो रिकॉर्ड नहीं मिला। रिकॉर्ड सिर्फ CSE, ECE और MBA के लिए हैं, इसलिए मैं अंदाज़ा नहीं लगाऊँगा।`,
-    hinglish: label => `${label} ka demo record nahi mila. Record sirf CSE, ECE aur MBA ke liye hai, isliye guess nahi karunga.`
+    en: label => `Sorry, no demo record found for ${label}. Records exist only for CSE, ECE and MBA, so I won't guess.`,
+    hi: label => `क्षमा करें, ${label} का डेमो रिकॉर्ड नहीं मिला। रिकॉर्ड सिर्फ CSE, ECE और MBA के लिए हैं, इसलिए मैं अंदाज़ा नहीं लगाऊँगा।`,
+    hinglish: label => `Sorry, ${label} ka demo record nahi mila. Record sirf CSE, ECE aur MBA ke liye hai, isliye guess nahi karunga.`
   },
   paperNeed: {
     en: "For a question paper I need the branch, semester and subject. Example: B.Tech CSE semester 3 Data Structures 2025 paper.",
