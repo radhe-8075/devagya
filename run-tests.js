@@ -53,6 +53,21 @@ const tests = [
   ["English: HOD cabin",                        ["where is hod sir cabin"],            "faculty","I found 2 matching faculty records"],
   ["Hindi follow-up: उसका रूम",                ["Dr. Neha Verma CSE", "उसका रूम कौन सा है?"], "faculty_room", "Room 302"],
   ["Hindi unknown gets Hindi fallback",        ["ज़रूरी बात"],                        "unknown","समझ नहीं पाया"],
+  ["Fee for a branch with no record (AI) is not guessed", ["btech ai ki fees kitni hai"], "fee", "record nahi mila"],
+  ["Fee for a branch with no record (English)",            ["What is the B.Tech AI tuition fee?"], "fee", "No fee record found for B.Tech AI"],
+  ["Fee for a branch with no record lists the branches that do have fees", ["btech ai ki fees kitni hai"], "fee", "CSE, ECE"],
+  ["Politeness word 'sir' does not hijack a fee question", ["B.Tech CSE tuition fee kitni hai sir"], "fee", "75,000"],
+  ["Politeness word 'sir' does not hijack an exam question", ["Data Structures exam kab hai sir"], "exam", "15 Nov"],
+  ["Greeting with 'sir' gets the introduction", ["hi sir"], "intro", "Devagya"],
+  ["Plain greeting gets the introduction", ["hello"], "intro", "Devagya"],
+  ["Out-of-scope question with 'sir' is not answered with faculty records", ["who won the world cup sir"], "unknown", "understand"],
+  ["Typo in a teacher name still finds the record", ["Dr. Aarav Shaarma CSE"], "faculty", "3001"],
+  ["Teacher with a title other than Dr. is found", ["Mr. Rahul Singh CSE"], "faculty", "304"],
+  ["Subject with no record is not guessed (teacher)", ["Physics teacher kaun hai"], "faculty", "nahi mila"],
+  ["Where to pay fees goes to the Accounts Office", ["fee jama karne kahan jana hai"], "campus", "Administrative Block D"],
+  ["Hostel warden office is a campus place, not the hostel list", ["where is the hostel warden office"], "campus", "Hostel Block H"],
+  ["Hindi attendance word (हाज़िरी) works", ["हाज़िरी का नियम"], "academic", "75%"],
+  ["Unsupported language (Tamil) gets a clear language message", ["வணக்கம்"], "unknown", "English, Hindi"],
   ["Follow-up: paper after exam",   ["B.Tech CSE exam dates batao", "Data Structures ka 2025 paper do"], "paper", "2025"]
 ];
 
@@ -285,7 +300,7 @@ async function call(base, question, context, workflow) {
   global.fetch = async (url, options) => {
     if (String(url).includes("generativelanguage.googleapis.com")) {
       llmCalls.push(JSON.parse(options.body));
-      if (llmMode === "fail") return { ok: false, status: 500, json: async () => ({}) };
+      if (llmMode === "fail") return { ok: false, status: 500, text: async () => "mock", json: async () => ({}) };
       return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: "MOCK-LLM-ANSWER" }] } }] }) };
     }
     return realFetch(url, options);

@@ -55,7 +55,7 @@ const VOCAB = [
   "marketing", "management", "mathematics", "english", "canteen",
   "cafeteria", "admission", "admissions", "accounts", "question",
   "previous", "tuition", "transport", "installment", "registration",
-  "workshop", "hackathon", "department", "student", "services"
+  "workshop", "hackathon", "department", "student", "services", "office", "warden"
 ];
 
 function editDistance(a, b) {
@@ -134,7 +134,7 @@ const HINDI_ALIASES = [
   ["उसकी", "uski"], ["इसकी", "iski"], ["सेमेस्टर", "semester"], ["पेपर", "paper"],
   ["गर्ल्स", "girls"], ["बॉयज़", "boys"], ["बॉयज", "boys"], ["एचओडी", "hod"],
   ["सीएसई", "cse"], ["एमबीए", "mba"], ["केबिन", "cabin"], ["डेटा स्ट्रक्चर", "data structures"],
-  ["डेटा स्ट्रक्चर्स", "data structures"], ["छात्रवृत्ति", "scholarship"], ["उपस्थिति", "attendance"],
+  ["डेटा स्ट्रक्चर्स", "data structures"], ["छात्रवृत्ति", "scholarship"], ["उपस्थिति", "attendance"], ["हाज़िरी", "attendance"], ["हाजिरी", "attendance"],
   ["दस्तावेज़", "documents"], ["दस्तावेज", "documents"], ["छात्रावास", "hostel"]
 ]
   .map(([hindi, english]) => [normalize(hindi), english])
@@ -190,6 +190,19 @@ function extractDetails(question) {
     branch = "MBA";
   }
 
+  // Branches the university has no records for: remember the name so the bot can say so
+  // instead of silently answering for another branch.
+  let unknownBranch = "";
+  if (!branch) {
+    const ub = q.match(/\b(aiml|ai ml|ai|artificial intelligence|data science|civil|electrical|eee|information technology|chemical|biotech|biotechnology|robotics|cyber security|cybersecurity)\b/);
+    const itMatch = !ub && (q.match(/\b(?:btech|b tech|b\.tech)\s+(it)\b/) || q.match(/\b(it)\s+(?:branch|department|dept)\b/));
+    if (ub || itMatch) {
+      const hit = ub ? ub[1] : "it";
+      const map = { aiml: "AIML", "ai ml": "AIML", ai: "AI", "artificial intelligence": "AI", "data science": "Data Science", civil: "Civil", electrical: "Electrical", eee: "EEE", it: "IT", "information technology": "IT", chemical: "Chemical", biotech: "Biotech", biotechnology: "Biotech", robotics: "Robotics", "cyber security": "Cyber Security", cybersecurity: "Cyber Security" };
+      unknownBranch = map[hit] || hit.toUpperCase();
+    }
+  }
+
   const roomMatch = q.match(
     /(?:room|कमरा|रूम)\s*(?:number|no\.?)?\s*(\d{2,5})|\b(3001)\b/
   );
@@ -224,6 +237,14 @@ function extractDetails(question) {
       ]
     },
     {
+      name: "Communication Skills",
+      words: [
+        "communication skills",
+        "communication skill",
+        "communication"
+      ]
+    },
+    {
       name: "English",
       words: [
         "english",
@@ -244,6 +265,14 @@ function extractDetails(question) {
 
   const subject =
     subjectAliases.find(item => contains(q, item.words))?.name || "";
+
+  // Subjects the university has no record for (never guess a teacher or exam for them).
+  const unknownSubjectMatch = subject
+    ? null
+    : q.match(/\b(physics|chemistry|biology|geography|history|economics|accounting|statistics|sociology|psychology|philosophy)\b/);
+  const unknownSubject = unknownSubjectMatch
+    ? unknownSubjectMatch[1].charAt(0).toUpperCase() + unknownSubjectMatch[1].slice(1)
+    : "";
 
   let feeTypeGiven = contains(q, [
     "hostel fee", "hostel fees", "transport", "bus fee", "bus fees",
@@ -398,21 +427,36 @@ function extractDetails(question) {
     "teachers",
     "faculty",
     "professor",
-    "sir",
     "cabin",
     "baithte",
     "baithti",
-    "madam",
     "hod",
     "head of department",
     "dr ",
     "dr.",
     "टीचर",
-    "सर",
-    "मैम",
     "अध्यापक",
     "शिक्षक"
   ]);
+
+  // "sir" / "madam" are usually just politeness ("fee kitni hai sir"), so they only
+  // mean faculty when nothing else in the question was understood.
+  const weakFacultyIntent = contains(q, ["sir", "madam", "mam", "maam", "सर", "मैम"]);
+
+  // Pure greetings ("hi", "hello sir", "namaste") -> introduction.
+  const GREETING_WORDS = new Set([
+    "hi", "hii", "hiii", "hello", "hlo", "hey", "heya", "namaste", "namaskar", "help",
+    "sir", "madam", "mam", "maam", "bhai", "yaar", "bro", "please", "pls", "plz", "ji",
+    "good", "morning", "afternoon", "evening", "there", "excuse", "me", "ek", "sawaal", "hai",
+    "mujhe", "batao", "bata", "do", "kuch", "poochna", "puchna", "devagya",
+    "नमस्ते", "नमस्कार", "हैलो", "हेलो", "हाय", "मदद"
+  ]);
+  const qWords = q.split(" ").filter(Boolean);
+  const greetingOnly =
+    qWords.length > 0 &&
+    qWords.length <= 6 &&
+    qWords.every(w => GREETING_WORDS.has(w)) &&
+    qWords.some(w => !["sir", "madam", "mam", "maam", "bhai", "yaar", "bro", "please", "pls", "plz", "ji", "ek", "sawaal", "hai", "mujhe", "batao", "bata", "do", "me", "excuse"].includes(w));
 
   const campusIntent = contains(q, [
     "library",
@@ -422,6 +466,9 @@ function extractDetails(question) {
     "subway",
     "canteen",
     "cafeteria",
+    "khana",
+    "खाना",
+    "warden",
     "accounts office",
     "admission office",
     "admissions office",
@@ -495,16 +542,24 @@ function extractDetails(question) {
     /\b(?:dr\.?|doctor|prof\.?|professor|mr\.?|mrs\.?|ms\.?)\s+([a-z]+(?:\s+[a-z]+){0,1})/i
   );
 
+  // "fee jama karne kahan jana hai" = where to pay -> Accounts Office
+  const payWhere =
+    contains(q, ["fee", "fees", "tuition"]) &&
+    contains(q, ["jama", "jamaa", "deposit", "pay", "submit", "bharna", "bharni"]) &&
+    contains(q, ["kahan", "kaha", "where", "kidhar", "kahaan"]);
+
   let intent = "unknown";
 
-  if (introIntent) intent = "intro";
+  if (introIntent || greetingOnly) intent = "intro";
   else if (scholarshipIntent || (contains(q, ["scholarship"]) && documentIntent)) intent = "scholarship";
   else if (certificateIntent) intent = "certificate";
   else if (documentIntent) intent = "document";
   else if (eventIntent) intent = "event";
   else if (paperIntent) intent = "paper";
+  else if (contains(q, ["warden"])) intent = "campus";
+  else if (payWhere) intent = "campus";
   else if (hostelIntent && !feeIntent) intent = "hostel";
-  else if (facultyIntent || (subject && !examIntent && !feeIntent)) intent = "faculty";
+  else if (facultyIntent || nameMatch || (subject && !examIntent && !feeIntent) || (unknownSubject && !examIntent && !feeIntent)) intent = "faculty";
   else if (roomIntent) intent = "room";
   else if (feeIntent) intent = "fee";
   else if (examIntent) intent = "exam";
@@ -517,10 +572,12 @@ function extractDetails(question) {
   }
 
   return {
-    q,
+    q: payWhere ? q + " accounts office" : q,
     intent,
     course,
     branch,
+    unknownBranch,
+    unknownSubject,
     room: roomMatch ? roomMatch[1] || roomMatch[2] : "",
     semester: semesterMatch
       ? semesterMatch[1] || semesterMatch[2]
@@ -739,6 +796,11 @@ const MSG = {
     hi: "कुछ गड़बड़ हो गई। कृपया फिर से कोशिश करें।",
     hinglish: "Request process nahi ho paayi. Dobara try karo."
   },
+  unsupportedLang: {
+    en: "I can currently answer only in English, Hindi (Devanagari) and Hinglish. Please type your question in one of these languages 👇",
+    hi: "मैं अभी सिर्फ़ अंग्रेज़ी, हिंदी (देवनागरी) और हिंग्लिश में जवाब दे सकता हूँ। कृपया इन्हीं में से किसी भाषा में सवाल लिखें 👇",
+    hinglish: "Main abhi sirf English, Hindi (Devanagari) aur Hinglish mein jawab de sakta hoon. Please inhi mein se kisi language mein sawaal likho 👇"
+  },
   unknown: {
     en: "I couldn't fully understand that. I can help with teachers, fees, exams, rooms, hostels, campus locations, question papers and scholarships. Try one of the questions below 👇",
     hi: "मैं यह पूरी तरह समझ नहीं पाया। मैं टीचर, फीस, परीक्षा, रूम, हॉस्टल, कैंपस की जगहों, प्रश्न पत्र और स्कॉलरशिप में मदद कर सकता हूँ। नीचे दिए सवालों में से कोई आज़माएँ 👇",
@@ -788,6 +850,16 @@ const MSG = {
     en: "No demo record for this fee type. Tell me the course, branch and fee type (for example: B.Tech CSE hostel fee). I won't guess missing amounts.",
     hi: "इस फीस का डेमो रिकॉर्ड नहीं मिला। कोर्स, ब्रांच और फीस का प्रकार बताइए (जैसे: B.Tech CSE हॉस्टल फीस)। मैं अंदाज़े से राशि नहीं बताऊँगा।",
     hinglish: "Is fee type ka demo record nahi mila. Course, branch aur fee type batao (jaise: B.Tech CSE hostel fee). Missing fee ka amount guess nahi kiya jayega."
+  },
+  feeNoBranch: {
+    en: (label, list) => `No fee record found for ${label}. Fee records exist only for: ${list}. I won't guess an amount for another branch.`,
+    hi: (label, list) => `${label} का फीस रिकॉर्ड नहीं मिला। फीस रिकॉर्ड सिर्फ इन के लिए हैं: ${list}। मैं दूसरी ब्रांच की राशि का अंदाज़ा नहीं लगाऊँगा।`,
+    hinglish: (label, list) => `${label} ka fee record nahi mila. Fee record sirf in ke liye hai: ${list}. Dusri branch ka amount guess nahi karunga.`
+  },
+  branchNoRecord: {
+    en: label => `No demo record found for ${label}. Records exist only for CSE, ECE and MBA, so I won't guess.`,
+    hi: label => `${label} का डेमो रिकॉर्ड नहीं मिला। रिकॉर्ड सिर्फ CSE, ECE और MBA के लिए हैं, इसलिए मैं अंदाज़ा नहीं लगाऊँगा।`,
+    hinglish: label => `${label} ka demo record nahi mila. Record sirf CSE, ECE aur MBA ke liye hai, isliye guess nahi karunga.`
   },
   paperNeed: {
     en: "For a question paper I need the branch, semester and subject. Example: B.Tech CSE semester 3 Data Structures 2025 paper.",
@@ -922,6 +994,21 @@ function facultyCard(f, lang) {
   );
 }
 
+// Typo-tolerant name match: every word typed must be close to a word of the real name
+// ("aarav shaarma" -> "Dr. Aarav Sharma"). Short words must match exactly.
+function fuzzyNameMatch(typed, realName) {
+  const real = normalize(realName).replace(/^(dr\.?|prof\.?|mr\.?|mrs\.?|ms\.?)\s*/, "").split(" ").filter(Boolean);
+  const words = normalize(typed).split(" ").filter(Boolean);
+  if (!words.length || !real.length) return false;
+
+  return words.every(w => real.some(r => {
+    if (r === w) return true;
+    if (w.length < 5) return false;
+    const max = w.length >= 6 ? 2 : 1;
+    return Math.abs(r.length - w.length) <= max && editDistance(w, r) <= max;
+  }));
+}
+
 function findFaculty(p) {
   const faculty = Array.isArray(knowledgeBase.faculties)
     ? knowledgeBase.faculties
@@ -934,6 +1021,14 @@ function findFaculty(p) {
 
   const subject = normalize(p.subject);
 
+  if (p.unknownBranch) {
+    return { answer: demoAnswer(tr(p.lang, "branchNoRecord", branchLabel(p)), p.lang), ids: [] };
+  }
+
+  if (p.unknownSubject) {
+    return { answer: demoAnswer(tr(p.lang, "noFaculty", p.unknownSubject), p.lang), ids: [] };
+  }
+
   const list = faculty.filter(f => {
     const haystack = normalize(
       `${f.name || ""} ${f.department || ""} ${f.course || ""} ${f.designation || ""} ${(f.subjects || []).join(" ")}`
@@ -942,7 +1037,8 @@ function findFaculty(p) {
     const nameOk =
       !cleanedName ||
       normalize(f.name).includes(cleanedName) ||
-      cleanedName.includes(normalize(f.name));
+      cleanedName.includes(normalize(f.name)) ||
+      fuzzyNameMatch(cleanedName, f.name);
 
     const branchOk =
       !p.branch || normalize(f.department).includes(normalize(p.branch));
@@ -1058,7 +1154,23 @@ function localizeHi(text) {
     .replace(/Central Library/g, "सेंट्रल लाइब्रेरी");
 }
 
+function branchLabel(p) {
+  return [p.course, p.unknownBranch || p.branch].filter(Boolean).join(" ").trim();
+}
+
+// True when the question names a branch that has no demo record at all.
+function isUnknownBranch(p, records) {
+  if (p.unknownBranch) return true;
+  if (p.branch && !(records || []).some(r => r.branch === p.branch || r.department === p.branch)) return true;
+  return false;
+}
+
 function findFee(p) {
+  if (isUnknownBranch(p, knowledgeBase.fees)) {
+    const list = [...new Set((knowledgeBase.fees || []).map(f => f.branch))].join(", ");
+    return demoAnswer(tr(p.lang, "feeNoBranch", branchLabel(p), list), p.lang);
+  }
+
   const fees = (knowledgeBase.fees || []).filter(f =>
     (!p.course || f.course === p.course) &&
     (!p.branch || f.branch === p.branch) &&
@@ -1110,6 +1222,14 @@ function findPaper(p) {
 }
 
 function findExam(p) {
+  if (isUnknownBranch(p, knowledgeBase.exams)) {
+    return { answer: demoAnswer(tr(p.lang, "branchNoRecord", branchLabel(p)), p.lang), records: [] };
+  }
+
+  if (p.unknownSubject) {
+    return { answer: demoAnswer(tr(p.lang, "examNotFound"), p.lang), records: [] };
+  }
+
   const exams = (knowledgeBase.exams || []).filter(e =>
     (!p.course || e.course === p.course) &&
     (!p.branch || e.branch === p.branch) &&
@@ -1137,9 +1257,10 @@ function findExam(p) {
 }
 
 function findCampus(p) {
-  const q = p.q;
+  const q = p.q.replace(/\b(khana|nashta)\b|खाना|नाश्ता/g, "food");
 
   const list = (knowledgeBase.campus || []).filter(c => {
+    if (q.includes("warden") && !normalize(c.name).includes("warden")) return false;
     const haystack = normalize(
       `${c.name || ""} ${c.category || ""} ${c.block || ""}`
     );
@@ -1570,11 +1691,22 @@ app.post("/api/chat", async (req, res) => {
       default: {
         // Local matching did not understand: ask the LLM (answers only from the
         // knowledge base), then the optional n8n helper, then the safe fallback.
-        const aiAnswer = (await askLLM(question, p.lang)) || (await askN8n(question));
+        // Text mostly in another script (Tamil, Bengali, Arabic ...): say which
+        // languages are supported instead of sending it to the LLM or guessing.
+        const letters = (String(question).match(/\p{L}/gu) || []);
+        // This branch only runs when the rules understood nothing, so any letter from an
+        // unsupported script (even with "please"/"hi" around it) gets the language message.
+        const otherScript = letters.some(ch => !/[A-Za-z\u0900-\u097F\u00C0-\u024F]/.test(ch));
 
-        answer = aiAnswer
-          ? demoAnswer("🤖 " + aiAnswer, p.lang)
-          : tr(p.lang, "unknown");
+        const aiAnswer = otherScript
+          ? null
+          : (await askLLM(question, p.lang)) || (await askN8n(question));
+
+        answer = otherScript
+          ? tr("en", "unsupportedLang")
+          : aiAnswer
+            ? demoAnswer("🤖 " + aiAnswer, p.lang)
+            : tr(p.lang, "unknown");
       }
     }
 
