@@ -722,7 +722,7 @@ async function understandQuestion(question, ctx) {
 
   try {
     const result = await ai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-5",
+      model: process.env.OPENAI_MODEL || "gpt-6.1-sol",
       instructions:
         "Classify a question for a fictional university demo assistant. Return JSON only with university_related, intent, course, branch, semester, year, subject, room, feeType, designation, name. Allowed intents: faculty, room, fee, exam, paper, campus, academic, intro, event, certificate, document, scholarship, hostel, unknown. Extract details only; never invent facts. Set university_related false only for clearly unrelated questions.",
       input: question
