@@ -27,9 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const readXp = () => {
     try {
       const value = JSON.parse(localStorage.getItem(xpKey) || "{}");
-      return { total: Number(value.total) || 0, lastDay: value.lastDay || "" };
+      return { total: Number(value.total) || 0, lastDay: value.lastDay || "", streak: Number(value.streak) || 0 };
     } catch {
-      return { total: 0, lastDay: "" };
+      return { total: 0, lastDay: "", streak: 0 };
     }
   };
   const drawXp = () => {
@@ -40,19 +40,32 @@ document.addEventListener("DOMContentLoaded", () => {
     $("d2XpTotal").textContent = data.total + " XP";
     $("d2XpLevel").textContent = "Level " + level + " · " + name;
     $("d2XpBar").style.width = (data.total % 100) + "%";
+    if ($("d2XpStreak")) $("d2XpStreak").textContent = data.streak + " day streak";
+    if ($("d2XpBadges")) {
+      const badges = [];
+      if (data.total >= 20) badges.push("First steps");
+      if (data.total >= 100) badges.push("Century learner");
+      if (data.total >= 300) badges.push("Project builder");
+      if (data.streak >= 7) badges.push("7-day learner");
+      $("d2XpBadges").replaceChildren(...(badges.length ? badges.map(label => make("span", "d2-chip", "🏅 " + label)) : [make("span", "d2-chip", "First steps · locked")]));
+    }
   };
   const awardXp = points => {
     const data = readXp();
     const today = new Date().toLocaleDateString("en-CA");
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterday = yesterdayDate.toLocaleDateString("en-CA");
     if (data.lastDay === today) {
       $("d2XpMessage").textContent = "You have already logged an XP activity today. Come back tomorrow for another daily activity.";
       return;
     }
     data.total += points;
+    data.streak = data.lastDay === yesterday ? data.streak + 1 : 1;
     data.lastDay = today;
     try {
       localStorage.setItem(xpKey, JSON.stringify(data));
-      $("d2XpMessage").textContent = "Great work! +" + points + " XP added on this device.";
+      $("d2XpMessage").textContent = "Great work! +" + points + " XP added on this device. Streak: " + data.streak + " day(s).";
     } catch {
       $("d2XpMessage").textContent = "Browser storage is unavailable. Your XP could not be saved.";
     }
