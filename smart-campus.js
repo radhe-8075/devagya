@@ -74,7 +74,8 @@ router.get("/meta", (req, res) => {
     modules: ["career", "radar", "teams", "xp", "study", "directory", "automation"],
     aiStudyEnabled: Boolean(ai),
     n8nEnabled: Boolean(process.env.N8N_SMART_CAMPUS_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL),
-    databaseEnabled: Boolean(process.env.DATABASE_URL || process.env.SUPABASE_URL),
+    databaseEnabled: false,
+    databaseConfigured: Boolean(process.env.DATABASE_URL || process.env.SUPABASE_URL),
     authenticationEnabled: false,
     demoData: true
   });
