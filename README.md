@@ -121,9 +121,9 @@ Deployed on Vercel from the `main` branch; static files are served from `public/
 leads to a real answer, empty and very long input, the health endpoint, that private files
 (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Baseline before the Devagya 2.0 feature branch: **97 passed, 0 failed**. The expanded code in this branch has not yet been executed in a Node.js environment; rerun npm test before merging or deploying. The existing service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, tampered workflow state, safe fallback and the staff status endpoint.
+Baseline on the original main branch before this upgrade: **97 passed, 0 failed**. Devagya 2.0 branch validation on Node.js 22: **105 passed, 0 failed** (including Smart Campus API, demo-data labelling, integration guard and privacy checks). The existing service-request tests continue to cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, tampered workflow state, safe fallback and the staff status endpoint.
 
-**Stress test:** `node stress-test.js` generates 1,1xx questions (`STRESS_MULT=20 node stress-test.js` generates about 11,100: English, Hinglish and Hindi, polite prefixes and suffixes such as "sir", typos, missing branches, subjects and rooms, other languages, out-of-scope and unsafe inputs) and checks every answer against `knowledge-base.js`. The repository README previously recorded **11,134 of 11,134 passed** for the pre-upgrade code. Rerun this stress test on the new branch; the result has not been revalidated after the Devagya 2.0 changes.
+**Stress test:** `node stress-test.js` generates 1,1xx questions (`STRESS_MULT=20 node stress-test.js` generates about 11,100: English, Hinglish and Hindi, polite prefixes and suffixes such as "sir", typos, missing branches, subjects and rooms, other languages, out-of-scope and unsafe inputs) and checks every answer against `knowledge-base.js`. Original main branch baseline: **11,134 of 11,134 passed**. Devagya 2.0 branch validation: **1,084 of 1,084 passed** in the CI run (November 13, 2026). The stress test covers the existing rule-based chatbot; it does not simulate live external AI or n8n calls.
 
 ### Sample inputs and outputs
 
