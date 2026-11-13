@@ -353,7 +353,13 @@ function handle(question, rawState) {
         name: state.data.name,
         roll: state.data.roll
       });
-      return reply(lang, "request_created", T[lang].created(record), [T[lang].chipStatus(record.id)], null);
+      const result = reply(lang, "request_created", T[lang].created(record), [T[lang].chipStatus(record.id)], null);
+      // Only non-personal operational metadata is forwarded to an optional admin workflow.
+      result.automationEvent = {
+        type: "certificate_request",
+        payload: { requestId: record.id, certificate: record.certificate, createdAt: record.createdAt }
+      };
+      return result;
     }
   }
 
