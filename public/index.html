@@ -39,6 +39,7 @@
                 <a href="#home" class="nav-link">Home</a>
                 <a href="#services" class="nav-link">Student Services</a>
                 <a href="#faculty-finder" class="nav-link">Faculty Cabin</a>
+                <a href="#smart-campus" class="nav-link">Smart Campus</a>
                 <a href="#about" class="nav-link">About</a>
                 <a href="#help" class="nav-link">Help Desk</a>
                 <button class="nav-chat-button" data-open-chat>
@@ -342,6 +343,126 @@
         </section>
 
 
+
+        <!-- DEVAGYA 2.0 SMART CAMPUS -->
+        <section class="devagya2-shell" id="smart-campus">
+            <div class="d2-wrap">
+                <div class="d2-topline">
+                    <span class="d2-eyebrow">DEVAGYA 2.0 · SMART CAMPUS</span>
+                    <span class="d2-status" id="d2SystemStatus">Checking services…</span>
+                </div>
+                <h2 class="d2-heading">Your campus. Your growth. <span>One intelligent space.</span></h2>
+                <p class="d2-intro">A student workspace for career planning, learning, opportunities and project collaboration. Existing Devagya chat and certificate workflows continue to work below and across the site.</p>
+                <div class="d2-hero-actions">
+                    <button class="d2-action" type="button" data-open-chat>💬 Ask Devagya AI</button>
+                    <a class="d2-action" href="#d2-career">Explore your roadmap ↓</a>
+                    <span class="d2-chip">Student demo workspace</span>
+                </div>
+
+                <div class="d2-grid">
+                    <article class="d2-card wide" id="d2-career">
+                        <div class="d2-icon">🧭</div>
+                        <h3>Career Navigator</h3>
+                        <p>Choose a direction and receive a staged learning roadmap, project ideas and a simple skills-gap checklist. No placement-probability claims.</p>
+                        <form id="d2CareerForm">
+                            <div class="d2-row">
+                                <select class="d2-field" id="d2CareerGoal" aria-label="Career goal">
+                                    <option value="Full Stack">Full-Stack Developer</option>
+                                    <option value="AI ML">AI / Machine Learning</option>
+                                    <option value="Data Science">Data Science</option>
+                                    <option value="Cybersecurity">Cybersecurity</option>
+                                    <option value="Competitive Programming">Competitive Programming</option>
+                                </select>
+                                <input class="d2-field" id="d2CareerSkills" placeholder="Your current skills (comma separated)" aria-label="Current skills">
+                            </div>
+                            <button class="d2-action" type="submit">Generate my roadmap →</button>
+                        </form>
+                        <div class="d2-list" id="d2CareerResult" aria-live="polite"><p class="d2-empty">Your personalised learning stages will appear here.</p></div>
+                    </article>
+
+                    <article class="d2-card" id="d2-xp">
+                        <div class="d2-icon">🏆</div>
+                        <h3>Campus XP</h3>
+                        <p>Build a learning habit with local progress points and milestones. This score stays in this browser only.</p>
+                        <div class="d2-metric" id="d2XpTotal">0 XP</div>
+                        <div class="d2-progress"><span id="d2XpBar"></span></div>
+                        <small id="d2XpLevel">Level 1 · Explorer</small>
+                        <small id="d2XpStreak">0 day streak</small>
+                        <div class="d2-list" id="d2XpBadges"><span class="d2-chip">First steps · locked</span></div>
+                        <div class="d2-row">
+                            <button class="d2-action" id="d2StudyXp" type="button">+20 Study XP</button>
+                            <button class="d2-action" id="d2ProjectXp" type="button">+30 Project XP</button>
+                        </div>
+                        <p id="d2XpMessage" class="d2-empty" aria-live="polite">Complete a learning activity to earn XP.</p>
+                    </article>
+
+                    <article class="d2-card wide" id="d2-radar">
+                        <div class="d2-icon">📡</div>
+                        <h3>Campus Radar</h3>
+                        <p>Explore sample hackathons, workshops, internship-preparation activities and scholarship guidance. Live official registrations are not connected yet.</p>
+                        <select class="d2-field" id="d2RadarFilter" aria-label="Filter opportunities">
+                            <option value="all">All categories</option><option>Hackathon</option><option>Internship</option><option>Workshop</option><option>Scholarship</option>
+                        </select>
+                        <div class="d2-list" id="d2RadarList" aria-live="polite"><p class="d2-empty">Loading sample opportunities…</p></div>
+                        <p class="d2-notice">Every item is marked as sample/demo. Verify eligibility, dates and registration only through official organisers.</p>
+                    </article>
+
+                    <article class="d2-card" id="d2-team">
+                        <div class="d2-icon">🤝</div>
+                        <h3>Find My Team</h3>
+                        <p>See example teammate profiles that match skills you enter. Profiles below are fictional placeholders, not real students.</p>
+                        <form id="d2TeamForm">
+                            <input class="d2-field" id="d2TeamSkills" placeholder="e.g. JavaScript, Python, UI" aria-label="Skills to match">
+                            <button class="d2-action" type="submit">Find sample matches</button>
+                        </form>
+                        <div class="d2-list" id="d2TeamList" aria-live="polite"><p class="d2-empty">Enter a skill to see sample profiles.</p></div>
+                    </article>
+
+                    <article class="d2-card" id="d2-study">
+                        <div class="d2-icon">📚</div>
+                        <h3>StudyMate AI</h3>
+                        <p>Ask for a topic explanation, notes summary, flashcards or practice questions. Generated AI help requires a server API key.</p>
+                        <form id="d2StudyForm">
+                            <select class="d2-field" id="d2StudyMode" aria-label="StudyMate mode">
+                                <option value="explain">Explain a topic</option><option value="summarise">Summarise my notes</option><option value="flashcards">Create flashcards</option><option value="practice">Practice questions with answers</option>
+                            </select>
+                            <textarea class="d2-field" id="d2StudyTopic" rows="4" maxlength="1600" placeholder="Enter a topic or paste a short section of your notes…"></textarea>
+                            <button class="d2-action" type="submit">Ask StudyMate →</button>
+                        </form>
+                        <div class="d2-item" id="d2StudyResult" aria-live="polite"><small>StudyMate response will appear here.</small></div>
+                    </article>
+
+                    <article class="d2-card" id="d2-directory">
+                        <div class="d2-icon">🗺️</div>
+                        <h3>Smart Campus Navigator</h3>
+                        <p>Faculty cabins, departments, labs and office locations will appear here once a verified campus directory is connected.</p>
+                        <div class="d2-list" id="d2DirectoryResult"><p class="d2-empty">No verified directory records connected.</p></div>
+                        <button class="d2-action" type="button" data-open-chat data-question="Help me find official campus office information.">Ask about campus help</button>
+                    </article>
+
+                    <article class="d2-card" id="d2-automation">
+                        <div class="d2-icon">⚙️</div>
+                        <h3>Automation Hub</h3>
+                        <p>n8n can route certificate requests, opportunity alerts and reminders through secure server-to-server webhooks.</p>
+                        <div class="d2-list" id="d2IntegrationStatus"><p class="d2-empty">Checking integration settings…</p></div>
+                        <p class="d2-notice">No webhook URL or secret is exposed in browser code. Set server environment variables and build the matching n8n workflow before enabling automation.</p>
+                    </article>
+
+                    <article class="d2-card full">
+                        <div class="d2-eyebrow">YOUR EXISTING DEVAGYA TOOLS</div>
+                        <h3>Student Services remain connected</h3>
+                        <p>Your original English, Hindi and Hinglish assistant, faculty lookup, guided bonafide/character certificate application, request IDs and request tracking remain part of this project.</p>
+                        <div class="d2-hero-actions">
+                            <button class="d2-action" type="button" data-open-chat>Open Devagya chat</button>
+                            <a class="d2-action" href="#services">Student Services</a>
+                            <a class="d2-action" href="#faculty-finder">Faculty Cabin Finder</a>
+                        </div>
+                    </article>
+                </div>
+                <p class="d2-footer-note">Devagya 2.0 is a student project demo. It is not an official GLA University system. Do not enter passwords, payment details or sensitive personal information.</p>
+            </div>
+        </section>
+
         <!-- ABOUT DEVAGYA -->
         <section class="about-section" id="about">
             <div class="section-container about-container">
@@ -570,6 +691,7 @@
 
 
     <!-- JAVASCRIPT -->
+    <script src="smart-campus.js"></script>
     <script src="script.js"></script>
 
 </body>

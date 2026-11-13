@@ -1795,3 +1795,84 @@ section {
     border-color: #2459d3;
     background: #eaf1ff;
 }
+
+
+/* DEVAGYA 2.0 — additive Smart Campus layer */
+:root{--d2-bg:#080d19;--d2-panel:#111a2b;--d2-panel2:#17243a;--d2-text:#eef4ff;--d2-muted:#9aabc4;--d2-line:rgba(153,178,216,.17);--d2-cyan:#59e1e8;--d2-violet:#9e8bff}
+.devagya2-shell{background:radial-gradient(ellipse at 15% 0%,rgba(67,99,190,.23),transparent 38%),linear-gradient(160deg,#080d19,#0b1423 60%,#101329);color:var(--d2-text);padding:76px 0 90px}
+.devagya2-shell *{box-sizing:border-box}
+.d2-wrap{width:min(1200px,92%);margin:auto}
+.d2-eyebrow{color:var(--d2-cyan);font-size:.72rem;letter-spacing:.18em;font-weight:800}
+.d2-heading{font-size:clamp(2rem,5vw,3.4rem);line-height:1.08;margin:12px 0;color:#f4f7ff}
+.d2-heading span{background:linear-gradient(90deg,var(--d2-cyan),var(--d2-violet));background-clip:text;color:transparent}
+.d2-intro{color:var(--d2-muted);max-width:690px}
+.d2-topline{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:28px}
+.d2-status{border:1px solid rgba(89,225,232,.3);border-radius:99px;padding:8px 13px;color:#9ceef0;font-size:.76rem;background:rgba(89,225,232,.07)}
+.d2-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;margin-top:30px}
+.d2-card{grid-column:span 4;background:linear-gradient(145deg,rgba(24,37,60,.92),rgba(13,22,38,.96));border:1px solid var(--d2-line);border-radius:20px;padding:22px;min-width:0;box-shadow:0 18px 45px rgba(0,0,0,.16);transition:transform .2s,border-color .2s}
+.d2-card:hover{transform:translateY(-3px);border-color:rgba(89,225,232,.44)}
+.d2-card.wide{grid-column:span 8}.d2-card.full{grid-column:1/-1}
+.d2-icon{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:1.35rem;background:linear-gradient(140deg,rgba(89,225,232,.17),rgba(158,139,255,.18));border:1px solid var(--d2-line)}
+.d2-card h3{margin:14px 0 6px;color:#f4f7ff;font-size:1.12rem}.d2-card p{color:var(--d2-muted);font-size:.9rem;line-height:1.6}
+.d2-card a,.d2-link{color:var(--d2-cyan);font-weight:700}
+.d2-action{border:1px solid rgba(89,225,232,.32);border-radius:11px;background:rgba(89,225,232,.1);color:#c8fbff;padding:10px 13px;font-weight:700;cursor:pointer;margin-top:14px}
+.d2-action:hover{background:rgba(89,225,232,.18)}
+.d2-field{width:100%;background:#0a1322;border:1px solid var(--d2-line);border-radius:11px;padding:12px 13px;color:#f4f7ff;margin-top:8px;min-width:0}
+.d2-field:focus{outline:2px solid rgba(89,225,232,.42);outline-offset:1px}
+.d2-row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.d2-row>*{flex:1}
+.d2-list{display:grid;gap:10px;margin-top:14px}.d2-item{padding:13px;border:1px solid var(--d2-line);border-radius:13px;background:rgba(9,17,30,.55)}
+.d2-item strong{display:block;color:#eef4ff}.d2-item small{color:var(--d2-muted)}
+.d2-chip{font-size:.7rem;padding:4px 8px;border:1px solid var(--d2-line);border-radius:99px;color:#a8dfe4;display:inline-block;margin:5px 5px 0 0}
+.d2-notice{font-size:.76rem;color:#e9c98b;border-left:3px solid #d6a85a;padding:8px 11px;background:rgba(214,168,90,.08);border-radius:4px 10px 10px 4px;margin-top:14px}
+.d2-progress{height:8px;border-radius:99px;background:#263248;overflow:hidden;margin:12px 0}.d2-progress span{display:block;height:100%;background:linear-gradient(90deg,var(--d2-cyan),var(--d2-violet));width:0}
+.d2-hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.d2-metric{font-size:2rem;font-weight:850;letter-spacing:-.04em;color:#fff}
+.d2-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0}
+.d2-tab{background:#111a2b;color:#c7d4e8;border:1px solid var(--d2-line);padding:8px 13px;border-radius:99px;cursor:pointer}.d2-tab[aria-pressed=true]{background:rgba(89,225,232,.14);border-color:var(--d2-cyan);color:#d3fcff}
+.d2-empty{color:var(--d2-muted);font-size:.88rem;padding:12px 0}
+.d2-footer-note{font-size:.76rem;color:#8294ae;margin-top:28px}
+@media(max-width:900px){.d2-card{grid-column:span 6}.d2-card.wide{grid-column:span 12}}
+@media(max-width:600px){.devagya2-shell{padding:52px 0}.d2-card,.d2-card.wide{grid-column:1/-1}.d2-wrap{width:min(100% - 28px,1200px)}}
+
+
+/* DEVAGYA 2.0 — unified futuristic dark theme for the original portal */
+body{background:#080d19;color:#e8effb}
+.site-header{background:rgba(8,13,25,.94);border-bottom:1px solid rgba(153,178,216,.16)}
+.brand-text h2{color:#eef4ff}.brand-text span{color:#9aabc4}
+.nav-link{color:#c6d4e8}.nav-link:hover{color:#59e1e8}
+.menu-toggle{background:#17243a;color:#eaf3ff;border:1px solid rgba(153,178,216,.2)}
+.hero-section{background:radial-gradient(ellipse at 75% 22%,rgba(53,94,175,.22),transparent 40%),linear-gradient(160deg,#080d19,#0b1423)}
+.hero-content h1,.section-heading h2,.about-content h2{color:#f1f6ff}
+.hero-content>p,.section-heading>p,.about-content>p{color:#a8b7cd}
+.hero-label{background:rgba(89,225,232,.1);color:#7ce8ec}
+.hero-content h1 span,.section-heading h2 span,.about-content h2 span{color:#59e1e8}
+.secondary-button{background:#17243a;color:#eaf3ff;border:1px solid rgba(153,178,216,.2)}
+.hero-note p{color:#a8b7cd}
+.quick-info{background:#0b1423;border-top:1px solid rgba(153,178,216,.1);border-bottom:1px solid rgba(153,178,216,.1)}
+.quick-info-item{background:#111a2b;border:1px solid rgba(153,178,216,.13);border-radius:14px;padding:14px}
+.quick-info-item strong{color:#eef4ff}.quick-info-item small{color:#9aabc4}
+.services-section{background:#0b1423}
+.service-card,.faculty-finder-card,.faculty-result-card{background:linear-gradient(145deg,#142139,#101a2d);border:1px solid rgba(153,178,216,.16);color:#eaf1ff}
+.service-card h3,.faculty-finder-card h3,.faculty-result-card h4{color:#f1f6ff}
+.service-card p,.faculty-finder-card>p,.faculty-result-card p{color:#a8b7cd}
+.service-icon,.faculty-finder-icon{background:rgba(89,225,232,.12);color:#8cf0f0}
+.service-card button,.service-card>a{color:#59e1e8}
+.faculty-section{background:#080d19}
+.faculty-search-form input{background:#0a1322;color:#eef4ff;border-color:rgba(153,178,216,.25)}
+.faculty-placeholder,.faculty-no-results{background:#17243a;color:#c6d4e8}
+.faculty-demo-note{color:#9aabc4!important}
+.about-section{background:#0b1423}
+.about-visual{background:radial-gradient(circle at 50% 50%,rgba(89,225,232,.13),transparent 65%),#111a2b}
+.about-emoji,.about-bubble{background:#17243a;color:#eaf3ff;border:1px solid rgba(153,178,216,.16)}
+.about-list li{color:#c6d4e8}
+.help-section{background:linear-gradient(135deg,#111d35,#172b50);border-top:1px solid rgba(153,178,216,.16)}
+.site-footer{background:#050914;border-top:1px solid rgba(153,178,216,.14)}
+.chat-widget{background:#101a2b;border:1px solid rgba(153,178,216,.2);color:#eef4ff}
+.chat-body{background:#0b1423}
+.chat-welcome h3{color:#eef4ff}.chat-welcome p{color:#a8b7cd}
+.message.bot .message-bubble,.typing-indicator{background:#17243a;color:#eaf3ff}
+.chat-quick-prompts,.chat-form,.chat-disclaimer{background:#101a2b}
+.chat-quick-prompts button{background:#17243a;color:#cfe0f5;border-color:rgba(153,178,216,.18)}
+.chat-form input{background:#0a1322;color:#eef4ff;border-color:rgba(153,178,216,.2)}
+.suggestions button{background:#17243a;color:#8debf0;border-color:rgba(89,225,232,.25)}
+@media(max-width:760px){.main-nav{background:#0d1728;border:1px solid rgba(153,178,216,.16)}.nav-link{color:#e2edfb}}

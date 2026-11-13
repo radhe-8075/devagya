@@ -8,11 +8,13 @@ const OpenAI = require("openai");
 const knowledgeBase = require("./knowledge-base");
 const workflow = require("./workflow");
 const { askLLM, llmEnabled } = require("./llm");
+const smartCampus = require("./smart-campus");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use("/api/smart-campus", smartCampus);
 // Local run: serve the public/ folder. On Vercel, files in public/ are served by the CDN instead.
 app.use(express.static(path.join(__dirname, "public"), { dotfiles: "deny" }));
 
@@ -720,7 +722,7 @@ async function understandQuestion(question, ctx) {
 
   try {
     const result = await ai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-5",
+      model: process.env.OPENAI_MODEL || "gpt-6.1-sol",
       instructions:
         "Classify a question for a fictional university demo assistant. Return JSON only with university_related, intent, course, branch, semester, year, subject, room, feeType, designation, name. Allowed intents: faculty, room, fee, exam, paper, campus, academic, intro, event, certificate, document, scholarship, hostel, unknown. Extract details only; never invent facts. Set university_related false only for clearly unrelated questions.",
       input: question
@@ -1627,6 +1629,10 @@ app.post("/api/chat", async (req, res) => {
     const wf = workflow.handle(question, req.body?.workflow);
 
     if (wf) {
+      if (wf.automationEvent) {
+        // Do not forward names or roll numbers to automation tools.
+        void smartCampus.dispatchEvent(wf.automationEvent.type, wf.automationEvent.payload);
+      }
       return res.json(wf);
     }
 

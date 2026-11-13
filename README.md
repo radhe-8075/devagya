@@ -47,6 +47,50 @@ Express server (server.js)  ── GET /api/health, POST /api/admin/status (staf
 | Optional n8n AI helper for unknown questions | Code present, **disabled in the demo** (no webhook set) |
 | Events, certificates and documents records | **Not populated yet** — bot says records are unavailable |
 
+## Devagya 2.0 — Smart Campus layer
+
+The devagya-2.0 branch adds an optional Smart Campus dashboard while preserving the original chatbot, language handling, faculty finder and certificate workflow.
+
+| Module | Current implementation | Important limitation |
+|---|---|---|
+| Devagya AI Brain | Existing English / Hindi / Hinglish chatbot and knowledge-base answers | University records remain demo records |
+| Career Navigator | Goal-based roadmap templates and skills-gap comparison | Guidance only; no placement prediction |
+| Campus Radar | Category-filtered opportunity and learning activity cards | All entries are sample/demo listings, not verified live registrations |
+| Find My Team | Skill-overlap matching against fictional profiles | No real student profiles or public sign-up |
+| Campus XP | Browser-local points, daily streak and achievement badges | Progress stays on this device; not linked to grades or attendance |
+| StudyMate AI | Explain, summarise, flashcard and practice modes via OpenAI Responses API | Requires OPENAI_API_KEY; unavailable when key is absent |
+| Smart Campus Navigator | Safe empty-state directory response | No verified faculty/cabin/location directory is connected |
+| Student Services | Existing guided Bonafide / Character request and Request ID tracking | Existing JSON storage is local/temporary on serverless hosting |
+| n8n Automation | Server-side webhook dispatch; certificate event hook | Requires a dedicated n8n workflow and environment configuration |
+| Authentication / database | Not implemented in this branch | Add a real identity provider and persistent database before real student use |
+
+### Smart Campus API routes
+
+- GET /api/smart-campus/meta — reports which optional integrations are configured.
+- GET /api/smart-campus/radar?category=all — returns clearly marked sample opportunities.
+- POST /api/smart-campus/career/plan — accepts a goal and list of current skills.
+- GET /api/smart-campus/teams?skills=JavaScript,Python — returns fictional sample matches.
+- GET /api/smart-campus/directory — safe empty state until verified data is supplied.
+- POST /api/smart-campus/study/assist — accepts a topic and mode; uses the configured OpenAI key.
+- POST /api/smart-campus/automation/dispatch — requires the x-automation-key header and an allow-listed event.
+
+### Optional Smart Campus environment settings
+
+Set these in the local .env or Vercel Project Settings → Environment Variables. Never put secrets in browser JavaScript or commit a real .env file.
+
+| Variable | Purpose |
+|---|---|
+| OPENAI_API_KEY | Enables StudyMate generated responses (the existing server-side key may be reused) |
+| OPENAI_MODEL | OpenAI model name used by StudyMate |
+| N8N_SMART_CAMPUS_WEBHOOK_URL | Dedicated n8n webhook URL; not exposed to the browser |
+| AUTOMATION_API_KEY | Protects the manual server-to-server automation dispatch endpoint |
+
+When a certificate request is successfully created, the workflow emits a minimal event containing only Request ID, certificate type and creation time. It does not send the student's name or roll number to n8n. The automatic event is skipped unless N8N_SMART_CAMPUS_WEBHOOK_URL is set. The webhook should validate the event header and use an allow-list for actions.
+
+### Before using with real students
+
+This remains a student project demo, not an official GLA University system. Do not enter real student personal data until authentication, role-based access, consent, retention/deletion, persistent encrypted storage, rate limiting and university approval are in place. Replace every sample opportunity and demo profile with source-backed approved records before showing them as real. Add verified directory entries only with permission. Do not infer fees, exam dates, faculty cabins or policy details.
+
 ## 2. Run it locally
 
 Requires Node.js 22 or newer.
@@ -77,9 +121,9 @@ Deployed on Vercel from the `main` branch; static files are served from `public/
 leads to a real answer, empty and very long input, the health endpoint, that private files
 (`server.js`, `.env`, `package.json`) cannot be downloaded, and that the website loads.
 
-Latest run: **97 passed, 0 failed.** The service-request tests cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, a tampered workflow state, the safe fallback and the staff status endpoint.
+Baseline on the original main branch before this upgrade: **97 passed, 0 failed**. Devagya 2.0 branch validation on Node.js 22: **105 passed, 0 failed** (including Smart Campus API, demo-data labelling, integration guard and privacy checks). The existing service-request tests continue to cover apply, Request ID, tracking, Hinglish and Hindi flows, invalid input, cancel, tampered workflow state, safe fallback and the staff status endpoint.
 
-**Stress test:** `node stress-test.js` generates 1,1xx questions (`STRESS_MULT=20 node stress-test.js` generates about 11,100: English, Hinglish and Hindi, polite prefixes and suffixes such as "sir", typos, missing branches, subjects and rooms, other languages, out-of-scope and unsafe inputs) and checks every answer against `knowledge-base.js`. Latest run: **11,134 of 11,134 passed**. It runs rule-based only, with no LLM and no internet.
+**Stress test:** `node stress-test.js` generates 1,1xx questions (`STRESS_MULT=20 node stress-test.js` generates about 11,100: English, Hinglish and Hindi, polite prefixes and suffixes such as "sir", typos, missing branches, subjects and rooms, other languages, out-of-scope and unsafe inputs) and checks every answer against `knowledge-base.js`. Original main branch baseline: **11,134 of 11,134 passed**. Devagya 2.0 branch validation: **1,084 of 1,084 passed** in the CI run (November 13, 2026). The stress test covers the existing rule-based chatbot; it does not simulate live external AI or n8n calls.
 
 ### Sample inputs and outputs
 
