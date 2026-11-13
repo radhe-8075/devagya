@@ -189,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const rows = [
       ["AI StudyMate", data.aiStudyEnabled ? "Configured" : "Needs OPENAI_API_KEY"],
       ["n8n automation", data.n8nEnabled ? "Webhook configured" : "Not configured"],
-      ["Database", data.databaseEnabled ? "Connection variable present" : "Not configured"],
+      ["Database", data.databaseEnabled ? "Enabled" : data.databaseConfigured ? "Variable found; adapter not implemented" : "Not implemented yet"],
       ["Student sign-in", "Not enabled"]
     ];
     rows.forEach(row => {
