@@ -8,11 +8,13 @@ const OpenAI = require("openai");
 const knowledgeBase = require("./knowledge-base");
 const workflow = require("./workflow");
 const { askLLM, llmEnabled } = require("./llm");
+const smartCampus = require("./smart-campus");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use("/api/smart-campus", smartCampus);
 // Local run: serve the public/ folder. On Vercel, files in public/ are served by the CDN instead.
 app.use(express.static(path.join(__dirname, "public"), { dotfiles: "deny" }));
 
