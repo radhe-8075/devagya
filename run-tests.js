@@ -5,6 +5,8 @@
  */
 process.env.OPENAI_API_KEY = "";   // tests must not depend on any external AI
 process.env.N8N_WEBHOOK_URL = "";
+process.env.N8N_SMART_CAMPUS_WEBHOOK_URL = "";
+process.env.AUTOMATION_API_KEY = "";
 process.env.GEMINI_API_KEY = "";
 process.env.REQUESTS_FILE = require("path").join(require("os").tmpdir(), "devagya-test-requests-" + process.pid + ".json");
 process.env.ADMIN_KEY = "test-admin-key";
@@ -190,7 +192,7 @@ async function call(base, question, context, workflow) {
   ]);
   const idMatch = String(full.last.answer).match(/BON-\d{4}/);
   report("Workflow: full apply flow creates a request with ID BON-xxxx",
-    full.last.intent === "request_created" && idMatch && full.last.workflow === null,
+    full.last.intent === "request_created" && idMatch && full.last.workflow === null && full.last.automationEvent && !("name" in full.last.automationEvent.payload) && !("roll" in full.last.automationEvent.payload),
     full.last.answer);
 
   const requestId = idMatch ? idMatch[0] : "BON-0000";
@@ -342,7 +344,44 @@ async function call(base, question, context, workflow) {
   const health = await (await fetch(base + "/api/health")).json();
   report("Health endpoint reports ok", health.status === "ok", JSON.stringify(health));
 
-  for (const file of ["/server.js", "/.env", "/package.json"]) {
+  // ---- Devagya 2.0 Smart Campus API checks ----
+  const smartMetaResponse = await fetch(base + "/api/smart-campus/meta");
+  const smartMeta = await smartMetaResponse.json();
+  report("Smart Campus meta endpoint loads", smartMetaResponse.status === 200 && smartMeta.version === "2.0" && smartMeta.modules.includes("career"), JSON.stringify(smartMeta));
+
+  const radarResponse = await fetch(base + "/api/smart-campus/radar");
+  const radar = await radarResponse.json();
+  report("Campus Radar clearly marks every sample record", radarResponse.status === 200 && radar.items.length >= 3 && radar.items.every(item => item.verified === false && /sample|guidance/i.test(item.source)), JSON.stringify(radar.items));
+
+  const careerResponse = await fetch(base + "/api/smart-campus/career/plan", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ goal: "AI ML", skills: ["Python"] })
+  });
+  const career = await careerResponse.json();
+  report("Career Navigator returns staged roadmap and skills gap", careerResponse.status === 200 && career.stages.length === 4 && career.skillGap.length > 0, JSON.stringify(career));
+
+  const teamsResponse = await fetch(base + "/api/smart-campus/teams?skills=JavaScript");
+  const teams = await teamsResponse.json();
+  report("Find My Team returns only fictional demo profiles", teamsResponse.status === 200 && teams.people.length === 3 && teams.people.every(person => person.demo === true), JSON.stringify(teams.people));
+
+  const directoryResponse = await fetch(base + "/api/smart-campus/directory");
+  const directory = await directoryResponse.json();
+  report("Campus directory does not invent unverified locations", directoryResponse.status === 200 && directory.records.length === 0 && /verified/i.test(directory.notice), JSON.stringify(directory));
+
+  const studyResponse = await fetch(base + "/api/smart-campus/study/assist", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ topic: "Explain recursion", mode: "explain" })
+  });
+  const study = await studyResponse.json();
+  report("StudyMate safely reports missing AI configuration", studyResponse.status === 503 && /OPENAI_API_KEY/.test(study.error), JSON.stringify(study));
+
+  const automationResponse = await fetch(base + "/api/smart-campus/automation/dispatch", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "opportunity_alert", payload: {} })
+  });
+  report("Automation dispatch requires a server-side key", automationResponse.status === 403, "status " + automationResponse.status);
+
+  for (const file of ["/server.js", "/smart-campus.js", "/.env", "/package.json"]) {
     const response = await fetch(base + file);
     report(`Private file ${file} is not downloadable`, response.status === 404, "status " + response.status);
   }
