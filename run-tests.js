@@ -381,10 +381,14 @@ async function call(base, question, context, workflow) {
   });
   report("Automation dispatch requires a server-side key", automationResponse.status === 403, "status " + automationResponse.status);
 
-  for (const file of ["/server.js", "/smart-campus.js", "/.env", "/package.json"]) {
+  for (const file of ["/server.js", "/.env", "/package.json"]) {
     const response = await fetch(base + file);
     report(`Private file ${file} is not downloadable`, response.status === 404, "status " + response.status);
   }
+
+  const publicSmartScript = await fetch(base + "/smart-campus.js");
+  const publicSmartScriptText = await publicSmartScript.text();
+  report("Smart Campus browser script loads as a public asset", publicSmartScript.status === 200 && publicSmartScriptText.includes("DOMContentLoaded"), "status " + publicSmartScript.status);
 
   const page = await fetch(base + "/");
   report("Website page loads", page.status === 200, "status " + page.status);
