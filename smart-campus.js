@@ -143,21 +143,27 @@ router.post("/automation/dispatch", async (req, res) => {
   const allowed = new Set(["certificate_request", "opportunity_alert", "deadline_reminder", "admin_digest"]);
   const event = cleanText(req.body && req.body.event, 40);
   if (!allowed.has(event)) return res.status(400).json({ error: "Unsupported automation event." });
-  const webhook = process.env.N8N_SMART_CAMPUS_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL;
-  if (!webhook) return res.status(503).json({ error: "n8n webhook is not configured." });
+  const ok = await dispatchEvent(event, req.body && req.body.payload || {});
+  if (!ok) return res.status(502).json({ error: "Could not reach the configured n8n webhook." });
+  res.json({ ok: true, event });
+});
+
+async function dispatchEvent(event, payload) {
+  const webhook = process.env.N8N_SMART_CAMPUS_WEBHOOK_URL;
+  if (!webhook) return false;
   try {
     const result = await fetch(webhook, {
       method: "POST",
       headers: { "content-type": "application/json", "x-devagya-event": event },
-      body: JSON.stringify({ event, payload: req.body && req.body.payload || {}, sentAt: new Date().toISOString(), source: "Devagya 2.0" }),
+      body: JSON.stringify({ event, payload: payload || {}, sentAt: new Date().toISOString(), source: "Devagya 2.0" }),
       signal: AbortSignal.timeout(10000)
     });
-    if (!result.ok) return res.status(502).json({ error: "n8n returned an unsuccessful response." });
-    res.json({ ok: true, event });
+    return result.ok;
   } catch (error) {
     console.error("n8n dispatch error:", error.message);
-    res.status(502).json({ error: "Could not reach the n8n webhook." });
+    return false;
   }
-});
+}
+router.dispatchEvent = dispatchEvent;
 
 module.exports = router;
