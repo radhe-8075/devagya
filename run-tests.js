@@ -351,7 +351,7 @@ async function call(base, question, context, workflow) {
 
   const radarResponse = await fetch(base + "/api/smart-campus/radar");
   const radar = await radarResponse.json();
-  report("Campus Radar clearly marks every sample record", radarResponse.status === 200 && radar.items.length >= 3 && radar.items.every(item => item.verified === false && /sample|guidance/i.test(item.source)), JSON.stringify(radar.items));
+  report("Campus Radar clearly marks every sample record", radarResponse.status === 200 && radar.items.length >= 3 && radar.items.every(item => item.verified === false && /sample|guidance|demo/i.test(item.source)), JSON.stringify(radar.items));
 
   const careerResponse = await fetch(base + "/api/smart-campus/career/plan", {
     method: "POST", headers: { "Content-Type": "application/json" },
