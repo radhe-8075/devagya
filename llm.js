@@ -132,7 +132,7 @@ async function askOpenAI(question, lang) {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
       body: JSON.stringify({
-        model: process.env.OPENAI_LLM_MODEL || "gpt-4o-mini",
+        model: process.env.OPENAI_LLM_MODEL || process.env.OPENAI_MODEL || "gpt-6.1-sol",
         temperature: 0.2,
         max_tokens: 500,
         messages: [
